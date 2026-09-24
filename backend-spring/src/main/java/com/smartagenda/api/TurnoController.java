@@ -41,7 +41,7 @@ public class TurnoController {
     return Map.of("message","Turno reservado exitosamente","id",jdbc.queryForObject("SELECT LAST_INSERT_ID()",Integer.class));
   }
 
-  @PutMapping public Map<String,String> update(@RequestBody Map<String,Object> body, HttpSession session) {
+  @PutMapping public Map<String,Object> update(@RequestBody Map<String,Object> body, HttpSession session) {
     Map<String,Object> user = SessionSupport.user(session); int id = AuthController.number(body,"idTurno",0); String accion = AuthController.text(body,"accion");
     if (id <= 0 || accion.isBlank()) throw new ApiException(HttpStatus.BAD_REQUEST,"ID de turno y acción requeridos");
     Map<String,Object> turno;
@@ -51,7 +51,7 @@ public class TurnoController {
     String estado = String.valueOf(turno.get("estado"));
     if ("confirmar".equals(accion)) { validState(estado,"pendiente","Solo se pueden confirmar turnos pendientes"); jdbc.update("UPDATE turno SET estado='confirmado' WHERE idTurno=?",id); return Map.of("message","Turno confirmado exitosamente"); }
     if ("finalizar".equals(accion)) { validState(estado,"confirmado","Solo se pueden finalizar turnos confirmados"); jdbc.update("UPDATE turno SET estado='finalizado' WHERE idTurno=?",id); return Map.of("message","Turno finalizado exitosamente"); }
-    if ("cancelar".equals(accion)) { if (!List.of("pendiente","confirmado").contains(estado)) throw new ApiException(HttpStatus.BAD_REQUEST,"No se puede cancelar este turno"); jdbc.update("UPDATE turno SET estado='cancelado' WHERE idTurno=?",id); jdbc.update("INSERT INTO cancelacion(motivo,idTurno) VALUES(?,?)",AuthController.textOr(body,"motivo","Sin motivo especificado"),id); return Map.of("message","Turno cancelado correctamente"); }
+    if ("cancelar".equals(accion)) { if (!List.of("pendiente","confirmado").contains(estado)) throw new ApiException(HttpStatus.BAD_REQUEST,"No se puede cancelar este turno"); jdbc.update("UPDATE turno SET estado='cancelado' WHERE idTurno=?",id); jdbc.update("INSERT INTO cancelacion(motivo,idTurno) VALUES(?,?)",AuthController.textOr(body,"motivo","Sin motivo especificado"),id); Integer espera=ofertarListaEspera(id,turno); return espera==null?Map.of("message","Turno cancelado correctamente"):Map.of("message","Turno cancelado y ofrecido a un cliente en lista de espera","idListaEspera",espera); }
     if ("reprogramar".equals(accion)) { String fecha=AuthController.text(body,"fecha"),hora=AuthController.text(body,"horaInicio"); if(fecha.isBlank()||hora.isBlank()) throw new ApiException(HttpStatus.BAD_REQUEST,"Nueva fecha y hora requeridas"); int duracion=jdbc.queryForObject("SELECT duracionMin FROM servicio WHERE idServicio=?",Integer.class,turno.get("idServicio")); String fin=LocalTime.parse(hora).plusMinutes(duracion).toString(); if(ocupado(((Number)turno.get("idProfesional")).intValue(),fecha,hora,fin,id)) throw new ApiException(HttpStatus.CONFLICT,"El nuevo horario no está disponible"); jdbc.update("UPDATE turno SET fecha=?,horaInicio=?,horaFin=? WHERE idTurno=?",fecha,hora,fin,id); return Map.of("message","Turno reprogramado exitosamente"); }
     throw new ApiException(HttpStatus.BAD_REQUEST,"Acción no válida");
   }
@@ -63,4 +63,5 @@ public class TurnoController {
   }
   private void validState(String current,String expected,String message) { if(!expected.equals(current)) throw new ApiException(HttpStatus.BAD_REQUEST,message); }
   private boolean ocupado(int profesional,String fecha,String inicio,String fin,Integer excluded) { String sql="SELECT COUNT(*) FROM turno WHERE idProfesional=? AND fecha=? AND estado IN ('pendiente','confirmado') AND horaInicio<? AND horaFin>?"+(excluded==null?"":" AND idTurno!=?"); List<Object> params=new ArrayList<>(List.of(profesional,fecha,fin,inicio)); if(excluded!=null)params.add(excluded); return jdbc.queryForObject(sql,Integer.class,params.toArray())>0; }
+  private Integer ofertarListaEspera(int turnoId,Map<String,Object> turno) { jdbc.update("UPDATE lista_espera SET estado='vencida' WHERE estado='ofertada' AND fechaExpiracion<NOW()"); List<Map<String,Object>> candidatos=jdbc.queryForList("SELECT idListaEspera FROM lista_espera WHERE estado='esperando' AND idProfesional=? AND idServicio=? AND fechaDeseada=? AND (horaDesde IS NULL OR horaDesde<=?) AND (horaHasta IS NULL OR horaHasta>=?) ORDER BY fechaSolicitud LIMIT 1",turno.get("idProfesional"),turno.get("idServicio"),turno.get("fecha"),turno.get("horaInicio"),turno.get("horaInicio")); if(candidatos.isEmpty())return null; int id=((Number)candidatos.getFirst().get("idListaEspera")).intValue(); jdbc.update("UPDATE lista_espera SET estado='ofertada',idTurnoOfertado=?,fechaExpiracion=DATE_ADD(NOW(),INTERVAL 10 MINUTE) WHERE idListaEspera=?",turnoId,id); return id; }
 }

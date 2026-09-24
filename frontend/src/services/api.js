@@ -61,3 +61,9 @@ export const usuarios = {
   getAll: () => request('usuarios'),
   update: (data) => request('usuarios', { method: 'PUT', body: data }),
 };
+
+export const listaEspera = {
+  getAll: () => request('lista-espera'),
+  create: (data) => request('lista-espera', { method: 'POST', body: data }),
+  update: (data) => request('lista-espera', { method: 'PUT', body: data }),
+};

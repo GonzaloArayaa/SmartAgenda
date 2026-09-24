@@ -19,6 +19,7 @@ export default function Sidebar() {
       { to: '/dashboard', icon: 'fa-home', label: 'Dashboard' },
       { to: '/buscar', icon: 'fa-search', label: 'Buscar Profesionales' },
       { to: '/mis-turnos', icon: 'fa-calendar-check', label: 'Mis Turnos' },
+      { to: '/lista-espera', icon: 'fa-hourglass-half', label: 'Lista de Espera' },
       { to: '/perfil', icon: 'fa-user-cog', label: 'Perfil' },
     ],
     Administrador: [

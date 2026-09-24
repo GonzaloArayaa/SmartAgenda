@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { servicios, profesionales, recomendaciones, turnos } from '../services/api';
+import { servicios, profesionales, recomendaciones, turnos, listaEspera } from '../services/api';
 
 export default function Reservar() {
   const { idProfesional } = useParams();
@@ -20,6 +20,7 @@ export default function Reservar() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
+  const [enEspera, setEnEspera] = useState(false);
 
   useEffect(() => {
     async function fetchData() {
@@ -97,6 +98,15 @@ export default function Reservar() {
     } finally {
       setSaving(false);
     }
+  }
+
+  async function anotarmeEnEspera() {
+    setSaving(true); setError('');
+    try {
+      await listaEspera.create({ idProfesional: Number(idProfesional), idServicio: servicioSeleccionado.idServicio, fecha });
+      setEnEspera(true);
+    } catch (err) { setError(err.message || 'No se pudo registrar la solicitud.'); }
+    finally { setSaving(false); }
   }
 
   function getStepClass(n) {
@@ -258,6 +268,11 @@ export default function Reservar() {
               <i className="fas fa-clock"></i>
               <h3>Sin horarios disponibles</h3>
               <p>No hay horarios disponibles para esta fecha. Probá con otra.</p>
+              {enEspera ? <p style={{ color: 'var(--success)', fontWeight: 600 }}>✓ Te anotaste en la lista de espera. Te avisaremos aquí si se libera un turno.</p> : (
+                <button className="btn btn-primary" onClick={anotarmeEnEspera} disabled={saving}>
+                  <i className="fas fa-hourglass-half"></i> {saving ? 'Registrando...' : 'Anotarme en lista de espera'}
+                </button>
+              )}
             </div>
           ) : (
             <div className="slots-grid">

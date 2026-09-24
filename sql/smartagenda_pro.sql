@@ -108,6 +108,28 @@ CREATE TABLE IF NOT EXISTS cancelacion (
 ) ENGINE=InnoDB;
 
 -- ============================================================
+-- TABLA: lista_espera
+-- Clientes interesados en ocupar un turno que se libere.
+-- ============================================================
+CREATE TABLE IF NOT EXISTS lista_espera (
+    idListaEspera INT AUTO_INCREMENT PRIMARY KEY,
+    fechaDeseada DATE NOT NULL,
+    horaDesde TIME NULL,
+    horaHasta TIME NULL,
+    estado VARCHAR(20) NOT NULL DEFAULT 'esperando',
+    fechaSolicitud DATETIME DEFAULT CURRENT_TIMESTAMP,
+    fechaExpiracion DATETIME NULL,
+    idCliente INT NOT NULL,
+    idProfesional INT NOT NULL,
+    idServicio INT NOT NULL,
+    idTurnoOfertado INT NULL,
+    FOREIGN KEY (idCliente) REFERENCES usuario(idUsuario),
+    FOREIGN KEY (idProfesional) REFERENCES profesional(idProfesional),
+    FOREIGN KEY (idServicio) REFERENCES servicio(idServicio),
+    FOREIGN KEY (idTurnoOfertado) REFERENCES turno(idTurno)
+) ENGINE=InnoDB;
+
+-- ============================================================
 -- TABLA: recomendacion
 -- ============================================================
 CREATE TABLE IF NOT EXISTS recomendacion (

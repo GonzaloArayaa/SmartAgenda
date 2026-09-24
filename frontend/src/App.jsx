@@ -16,6 +16,7 @@ import MisTurnos from './pages/MisTurnos';
 import Reportes from './pages/Reportes';
 import Usuarios from './pages/Usuarios';
 import Perfil from './pages/Perfil';
+import ListaEspera from './pages/ListaEspera';
 
 function ProtectedRoute({ children, roles }) {
   const { user, loading } = useAuth();
@@ -65,6 +66,9 @@ function AppRoutes() {
       } />
       <Route path="/mis-turnos" element={
         <ProtectedRoute roles={['Cliente']}><AppLayout><MisTurnos /></AppLayout></ProtectedRoute>
+      } />
+      <Route path="/lista-espera" element={
+        <ProtectedRoute roles={['Cliente']}><AppLayout><ListaEspera /></AppLayout></ProtectedRoute>
       } />
       <Route path="/reportes" element={
         <ProtectedRoute roles={['Profesional', 'Administrador']}><AppLayout><Reportes /></AppLayout></ProtectedRoute>
