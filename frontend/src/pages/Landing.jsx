@@ -1,118 +1,18 @@
 import { Link } from 'react-router-dom';
 import { useTheme } from '../context/ThemeContext';
 
+const citas = [['09:00','Consulta general','Juan Pérez','ok'],['10:30','Control de seguimiento','Laura Fernández','pending'],['12:00','Horario disponible','Listo para reservar','free'],['16:00','Consulta general','Sofía Rojas','ok']];
+const rubros = [['fa-scissors','Peluquerías y barberías','Servicios, duración y agenda por profesional.'],['fa-stethoscope','Consultorios','Seguimiento y disponibilidad en tiempo real.'],['fa-paw','Veterinarias','Una agenda clara para cada atención diaria.'],['fa-dumbbell','Entrenadores','Sesiones, clases y clientes organizados.']];
+
 export default function Landing() {
   const { theme, toggleTheme } = useTheme();
-
-  return (
-    <div className="landing-page">
-      {/* NAVBAR */}
-      <nav className="landing-nav">
-        <div className="landing-nav-brand">
-          <div className="landing-nav-icon">📅</div>
-          <span>SmartAgenda Pro</span>
-        </div>
-        <div className="landing-nav-links">
-          <a href="#features">Funciones</a>
-          <a href="#rubros">Rubros</a>
-          <a href="#contacto">Contacto</a>
-        </div>
-        <div className="landing-nav-actions">
-          <button className="theme-toggle" onClick={toggleTheme} title="Cambiar tema">
-            {theme === 'dark' ? '☀️' : '🌙'}
-          </button>
-          <Link to="/login" className="btn-nav-login">Iniciar sesión</Link>
-        </div>
-      </nav>
-
-      {/* HERO */}
-      <section className="landing-hero">
-        <div className="landing-hero-text">
-          <h1>Gestioná tus turnos<br />de cualquier rubro,<br />en un solo lugar</h1>
-          <p>Ideal para peluquerías, veterinarias, clínicas,<br />gimnasios, odontólogos y más.</p>
-          <div className="landing-hero-btns">
-            <Link to="/register" className="btn-hero-primary">Comenzar ahora</Link>
-            <Link to="/login" className="btn-hero-secondary">Ver demo</Link>
-          </div>
-        </div>
-        <div className="landing-hero-visual">
-          <div className="hero-calendar">
-            <div className="hero-cal-header">
-              <span>◀</span>
-              <strong>Junio 2025</strong>
-              <span>▶</span>
-            </div>
-            <div className="hero-cal-grid">
-              {['L','M','X','J','V','S','D'].map(d => (
-                <div key={d} className="hero-cal-day-label">{d}</div>
-              ))}
-              {[...Array(30)].map((_, i) => (
-                <div
-                  key={i}
-                  className={`hero-cal-day ${i === 14 ? 'active' : ''} ${[2,8,19,25].includes(i) ? 'has-event' : ''}`}
-                >
-                  {i + 1}
-                </div>
-              ))}
-            </div>
-          </div>
-          <div className="hero-badge hero-badge-1">✂️ Peluquería 14:00</div>
-          <div className="hero-badge hero-badge-2">🐾 Vet. 10:30</div>
-          <div className="hero-badge hero-badge-3">🦷 Odonto 16:00</div>
-        </div>
-      </section>
-
-      {/* FEATURES */}
-      <section className="landing-features" id="features">
-        <div className="landing-feature">
-          <span className="feature-icon">⚡</span>
-          <strong>Rápido</strong>
-        </div>
-        <div className="landing-feature">
-          <span className="feature-icon">🎯</span>
-          <strong>Fácil</strong>
-        </div>
-        <div className="landing-feature">
-          <span className="feature-icon">🔒</span>
-          <strong>Seguro</strong>
-        </div>
-        <div className="landing-feature">
-          <span className="feature-icon">🗂️</span>
-          <strong>MultiRubro</strong>
-        </div>
-      </section>
-
-      {/* RUBROS */}
-      <section className="landing-rubros" id="rubros">
-        <h2>Un sistema para todos los rubros</h2>
-        <div className="rubros-grid">
-          {[
-            { icon: '✂️', name: 'Peluquería / Barbería' },
-            { icon: '🐾', name: 'Veterinaria' },
-            { icon: '🩺', name: 'Clínica / Consultorio' },
-            { icon: '🦷', name: 'Odontología' },
-            { icon: '🏋️', name: 'Gimnasio / Fitness' },
-            { icon: '🌸', name: 'Masajes / Kinesiología' },
-          ].map((r) => (
-            <div key={r.name} className="rubro-card">
-              <span className="rubro-icon">{r.icon}</span>
-              <span>{r.name}</span>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      {/* CTA */}
-      <section className="landing-cta">
-        <h2>¿Listo para organizar tu agenda?</h2>
-        <p>Unite a cientos de profesionales que ya usan SmartAgenda Pro</p>
-        <Link to="/register" className="btn-hero-primary">Crear cuenta gratis</Link>
-      </section>
-
-      {/* FOOTER */}
-      <footer className="landing-footer">
-        <p>© 2025 SmartAgenda Pro · Todos los derechos reservados</p>
-      </footer>
-    </div>
-  );
+  return <div className="landing-page landing-v2">
+    <nav className="landing-nav"><Link to="/" className="landing-nav-brand"><div className="landing-nav-icon"><i className="fas fa-calendar-check" /></div><span>SmartAgenda</span></Link><div className="landing-nav-links"><a href="#como-funciona">Cómo funciona</a><a href="#rubros">Soluciones</a><a href="#resultados">Resultados</a></div><div className="landing-nav-actions"><button className="theme-toggle" onClick={toggleTheme}><i className={`fas fa-${theme === 'dark' ? 'sun' : 'moon'}`} /></button><Link to="/login" className="landing-login">Ingresar</Link><Link to="/register" className="landing-join">Probar gratis</Link></div></nav>
+    <main><section className="landing-hero" id="como-funciona"><div className="landing-hero-text"><span className="landing-kicker"><i /> AGENDA ONLINE PARA PROFESIONALES</span><h1>Tu agenda de trabajo,<br /><em>ordenada de verdad.</em></h1><p>Reservas, disponibilidad, clientes y métricas en un solo lugar. Dedicá menos tiempo a coordinar y más a atender.</p><div className="landing-hero-btns"><Link to="/register" className="btn-hero-primary">Crear mi agenda <i className="fas fa-arrow-right" /></Link><Link to="/login" className="btn-hero-secondary">Ver demostración</Link></div><p className="hero-note"><i className="fas fa-check-circle" /> Configurá tus horarios y empezá a recibir reservas.</p></div>
+      <div className="agenda-preview"><header><div><small>MARTES, 24 DE SEPTIEMBRE</small><h3>Agenda de hoy</h3></div><button><i className="fas fa-ellipsis-h" /></button></header><div className="preview-summary"><div><span>Turnos de hoy</span><b>8</b></div><div><span>Ocupación</span><b>76%</b></div><div><span>Próximo</span><b>09:00</b></div></div><div className="preview-list">{citas.map(([hora,servicio,cliente,estado])=><div className={`preview-slot ${estado}`} key={hora}><time>{hora}</time><i /><div><b>{servicio}</b><span>{cliente}</span></div>{estado==='pending'&&<small>Por confirmar</small>}{estado==='free'&&<button>+ Agendar</button>}</div>)}</div><footer><i className="fas fa-bell" /> Se liberó un horario: hay 2 clientes en lista de espera</footer></div></section>
+      <section className="landing-results" id="resultados"><div><small>MENOS COORDINACIÓN MANUAL</small><strong>Todo lo importante, visible en segundos.</strong></div>{[['fa-calendar-day','Disponibilidad real','Los clientes solo ven horarios libres.'],['fa-bell','Cancelaciones aprovechadas','Lista de espera para no perder turnos.'],['fa-chart-line','Mejores decisiones','Reportes claros para tu negocio.']].map(([icon,titulo,desc])=><article key={titulo}><i className={`fas ${icon}`} /><p><b>{titulo}</b>{desc}</p></article>)}</section>
+      <section className="landing-rubros" id="rubros"><div className="section-intro"><span className="landing-kicker">UN SISTEMA, DISTINTAS FORMAS DE TRABAJAR</span><h2>Una agenda que se adapta a tu forma de atender.</h2></div><div className="rubros-grid">{rubros.map(([icon,titulo,desc])=><article className="rubro-card" key={titulo}><i className={`fas ${icon}`} /><h3>{titulo}</h3><p>{desc}</p><span>Ver solución <i className="fas fa-arrow-right" /></span></article>)}</div></section>
+      <section className="landing-cta"><div><span className="landing-kicker">EMPEZÁ HOY</span><h2>Que coordinar turnos deje de ser tu trabajo extra.</h2><p>Creá tu cuenta, configurá horarios y empezá a recibir reservas.</p></div><Link to="/register" className="btn-hero-primary">Crear cuenta gratis <i className="fas fa-arrow-right" /></Link></section></main>
+    <footer className="landing-footer"><b>SmartAgenda Pro</b><p>Gestión de turnos para profesionales independientes.</p><p>© 2026</p></footer>
+  </div>;
 }
