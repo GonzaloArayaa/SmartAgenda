@@ -9,6 +9,9 @@ export function AuthProvider({ children }) {
 
   useEffect(() => {
     checkAuth();
+    const cerrarSesionVencida = () => setUser(null);
+    window.addEventListener('smartagenda:sesion-vencida', cerrarSesionVencida);
+    return () => window.removeEventListener('smartagenda:sesion-vencida', cerrarSesionVencida);
   }, []);
 
   async function checkAuth() {

@@ -1,62 +1,49 @@
 # SmartAgenda Pro 📅
 
-Sistema SaaS de Agenda Inteligente para Profesionales.
+Sistema de agenda inteligente para profesionales, con frontend React y API REST en Spring Boot.
 
 ## Requisitos
 
-- **PHP 8.0+** (con extensión PDO MySQL)
-- **MySQL Server** (accesible vía DBeaver u otro cliente)
-- **Node.js 18+** y npm
+- Java 21
+- MySQL Server 8+
+- Node.js 18+ y npm
 
-## Instalación y Setup
+## Base de datos
 
-### 1. Base de Datos
+Crear la base `smartagenda_pro` y ejecutar una vez el archivo `sql/smartagenda_pro.sql` desde DBeaver o phpMyAdmin.
 
-Abrí **DBeaver** y conectate a tu MySQL Server. Luego:
+El backend toma estos valores por defecto para desarrollo local:
 
-**Opción A** — Ejecutar el SQL manualmente:
-1. Abrí el archivo `sql/smartagenda_pro.sql` en DBeaver
-2. Ejecutalo completo (crea la base de datos, tablas y datos demo)
-3. Luego ejecutá el setup para hashear contraseñas:
-   ```bash
-   cd SmartAgenda_Pro
-   php setup.php
-   ```
-
-**Opción B** — Solo ejecutar setup.php:
-```bash
-cd SmartAgenda_Pro
-php setup.php
+```text
+DB_URL=jdbc:mysql://localhost:3306/smartagenda_pro
+DB_USERNAME=smartagenda
+DB_PASSWORD=1234
 ```
-Esto crea la base de datos, tablas y datos de prueba automáticamente.
 
-> **Nota:** Si tu MySQL usa un usuario/contraseña diferente a `root` sin contraseña,
-> editá `config/database.php` y `setup.php` con tus credenciales.
+Se pueden reemplazar mediante variables de entorno antes de iniciar Spring Boot.
 
-### 2. Backend PHP
+## Ejecutar la aplicación
 
-Abrí una terminal y ejecutá:
-```bash
-cd SmartAgenda_Pro
-php -S localhost:8000
+En una terminal, iniciar el backend:
+
+```powershell
+cd backend-spring
+.\mvnw.cmd spring-boot:run
 ```
-Esto levanta el servidor PHP en el puerto 8000.
 
-### 3. Frontend React
+La API queda disponible en `http://127.0.0.1:8080`.
 
-Abrí **otra terminal** y ejecutá:
-```bash
-cd SmartAgenda_Pro/frontend
-npm install
-npm run dev
+En otra terminal, iniciar el frontend:
+
+```powershell
+cd frontend
+npm.cmd install
+npm.cmd run dev -- --host 127.0.0.1
 ```
-Esto levanta el frontend en `http://localhost:5173`
 
-### 4. Abrir la App
+Abrir `http://127.0.0.1:5173`.
 
-Abrí tu navegador en: **http://localhost:5173**
-
-## Usuarios de Prueba
+## Usuarios de prueba
 
 | Rol | Email | Contraseña |
 |---|---|---|
@@ -64,42 +51,19 @@ Abrí tu navegador en: **http://localhost:5173**
 | Profesional | martinez@smartagenda.com | prof123 |
 | Cliente | juanperez@smartagenda.com | cliente123 |
 
-## Estructura del Proyecto
+## Estructura
 
-```
+```text
 SmartAgenda_Pro/
-├── api/              ← Backend PHP (endpoints REST)
-│   ├── cors.php
-│   ├── auth.php
-│   ├── servicios.php
-│   ├── turnos.php
-│   ├── disponibilidad.php
-│   ├── profesionales.php
-│   ├── usuarios.php
-│   ├── recomendaciones.php  ← Motor Inteligente
-│   └── reportes.php
-├── config/
-│   └── database.php
-├── sql/
-│   └── smartagenda_pro.sql
-├── setup.php
-└── frontend/         ← Frontend React + Vite
-    └── src/
-        ├── components/
-        ├── context/
-        ├── pages/
-        └── services/
+├── backend-spring/    ← API REST Spring Boot
+├── frontend/          ← React + Vite
+└── sql/               ← Esquema y datos demostrativos de MySQL
 ```
 
 ## Funcionalidades
 
-- ✅ Login/Registro con roles (Cliente, Profesional, Admin)
-- ✅ Dashboard personalizado por rol
-- ✅ CRUD de Servicios (Profesional)
-- ✅ Configuración de Disponibilidad
-- ✅ Agenda semanal con turnos coloreados
-- ✅ Reserva de turnos con Motor Inteligente
-- ✅ Cancelar y reprogramar turnos
-- ✅ Búsqueda de profesionales por rubro
-- ✅ Reportes y estadísticas con gráficos
-- ✅ Panel de administración de usuarios
+- Login y registro con roles: Cliente, Profesional y Administrador.
+- Gestión de servicios y disponibilidad.
+- Reserva, confirmación, cancelación y reprogramación de turnos.
+- Búsqueda de profesionales y recomendaciones de horarios.
+- Reportes y administración de usuarios.
