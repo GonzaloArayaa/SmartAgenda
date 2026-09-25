@@ -35,9 +35,9 @@ export default function Disponibilidad() {
     fetchDisponibilidad();
   }, [user.idProfesional]);
 
-  function openCreate() {
+  function openCreate(dia = 'Lunes') {
     setEditing(null);
-    setForm({ diaSemana: 'Lunes', horaInicio: '08:00', horaFin: '17:00', intervaloMin: '30' });
+    setForm({ diaSemana: dia, horaInicio: '08:00', horaFin: '17:00', intervaloMin: '30' });
     setError('');
     setShowModal(true);
   }
@@ -118,102 +118,96 @@ export default function Disponibilidad() {
     }
   }
 
-  function getDayIcon(dia) {
-    const icons = {
-      Lunes: 'fa-calendar-day',
-      Martes: 'fa-calendar-day',
-      Miercoles: 'fa-calendar-day',
-      Jueves: 'fa-calendar-day',
-      Viernes: 'fa-calendar-day',
-      Sabado: 'fa-calendar-week',
-      Domingo: 'fa-calendar-week',
-    };
-    return icons[dia] || 'fa-calendar';
-  }
-
   if (loading) return <div className="spinner"></div>;
 
-  return (
-    <div>
-      <div className="page-header">
-        <div>
-          <h2><i className="fas fa-clock"></i> Disponibilidad</h2>
-          <p>Configurá los días y horarios en los que atendés.</p>
-        </div>
-        <button className="btn btn-primary" onClick={openCreate}>
-          <i className="fas fa-plus"></i> Agregar Día
-        </button>
-      </div>
+  const minutosSemanales = lista.reduce((total, d) => {
+    const [hi, mi] = String(d.horaInicio).split(':').map(Number);
+    const [hf, mf] = String(d.horaFin).split(':').map(Number);
+    return total + Math.max(0, (hf * 60 + mf) - (hi * 60 + mi));
+  }, 0);
+  const horasSemanales = Math.round((minutosSemanales / 60) * 10) / 10;
+  const formatHora = (hora) => String(hora || '').slice(0, 5);
 
-      {lista.length === 0 ? (
-        <div className="empty-state">
-          <i className="fas fa-clock"></i>
-          <h3>Sin disponibilidad configurada</h3>
-          <p>Agregá tus días y horarios de atención para que los clientes puedan reservar.</p>
+  return (
+    <div className="availability-page">
+      <section className="availability-hero">
+        <div>
+          <span className="availability-kicker">PLANIFICACIÓN SEMANAL</span>
+          <h2>Tu disponibilidad</h2>
+          <p>Definí cuándo pueden reservarte y mantené tu semana bajo control.</p>
         </div>
-      ) : (
-        <div className="disp-grid">
-          {lista.map((d) => (
-            <div key={d.idDisponibilidad} className="disp-card">
-              <h4>
-                <i className={`fas ${getDayIcon(d.diaSemana)}`}></i> {d.diaSemana}
-              </h4>
-              <p className="disp-time">{d.horaInicio} - {d.horaFin}</p>
-              <p>Intervalo: {d.intervaloMin} min</p>
-              <div className="disp-card-actions">
-                <button className="btn btn-outline btn-sm" onClick={() => openEdit(d)}>
-                  <i className="fas fa-edit"></i>
-                </button>
-                <button className="btn btn-danger btn-sm" onClick={() => handleDelete(d)}>
-                  <i className="fas fa-trash"></i>
-                </button>
-              </div>
-            </div>
-          ))}
+        <button className="availability-add-btn" onClick={() => openCreate()}>
+          <i className="fas fa-plus"></i> Agregar horario
+        </button>
+      </section>
+
+      <section className="availability-summary">
+        <div className="availability-summary-main">
+          <div className="availability-summary-icon"><i className="far fa-calendar-check" /></div>
+          <div><span>Cobertura semanal</span><strong>{lista.length} de 7 días configurados</strong></div>
         </div>
-      )}
+        <div className="availability-progress"><span style={{ width: `${(lista.length / 7) * 100}%` }} /></div>
+        <div className="availability-summary-metric"><span>Horas disponibles</span><strong>{horasSemanales} h</strong></div>
+        <div className="availability-summary-metric"><span>Duración habitual</span><strong>{lista[0]?.intervaloMin || 30} min</strong></div>
+      </section>
+
+      <section className="week-planner">
+        <div className="week-planner-header">
+          <div><span>SEMANA DE TRABAJO</span><h3>Horarios de atención</h3></div>
+          <p><i className="fas fa-circle" /> Disponible para reservas</p>
+        </div>
+        <div className="week-list">
+          {DIAS.map((dia, index) => {
+            const horario = lista.find((item) => item.diaSemana === dia);
+            return (
+              <article key={dia} className={`week-day-row ${horario ? 'is-active' : 'is-closed'}`}>
+                <div className="week-day-name"><span>{String(index + 1).padStart(2, '0')}</span><div><strong>{dia}</strong><small>{horario ? 'Atención habilitada' : 'Sin atención'}</small></div></div>
+                {horario ? (
+                  <>
+                    <div className="week-day-hours"><i className="far fa-clock" /><strong>{formatHora(horario.horaInicio)} — {formatHora(horario.horaFin)}</strong></div>
+                    <div className="week-day-interval"><span>Turnos cada</span><strong>{horario.intervaloMin} min</strong></div>
+                    <div className="week-day-actions">
+                      <button onClick={() => openEdit(horario)} title={`Editar ${dia}`}><i className="fas fa-pen" /></button>
+                      <button className="delete" onClick={() => handleDelete(horario)} title={`Eliminar ${dia}`}><i className="far fa-trash-alt" /></button>
+                    </div>
+                  </>
+                ) : (
+                  <button className="week-day-add" onClick={() => openCreate(dia)}><i className="fas fa-plus" /> Configurar día</button>
+                )}
+              </article>
+            );
+          })}
+        </div>
+      </section>
+
+      <aside className="availability-tip">
+        <i className="far fa-lightbulb" />
+        <div><strong>Una agenda precisa evita reservas fuera de horario.</strong><span>Revisá esta configuración cuando cambien tus jornadas o la duración de tus servicios.</span></div>
+      </aside>
 
       {showModal && (
-        <div className="modal-overlay" onClick={closeModal}>
-          <div className="modal" onClick={(e) => e.stopPropagation()}>
+        <div className="modal-overlay availability-modal-overlay" onClick={closeModal}>
+          <div className="modal availability-modal" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
-              <h3>{editing ? 'Editar Disponibilidad' : 'Nueva Disponibilidad'}</h3>
+              <div><span>{editing ? 'ACTUALIZAR JORNADA' : 'NUEVA JORNADA'}</span><h3>{editing ? `Editar ${editing.diaSemana}` : 'Configurar horario'}</h3></div>
               <button className="modal-close" onClick={closeModal}>
                 <i className="fas fa-times"></i>
               </button>
             </div>
 
-            {error && (
-              <div style={{
-                background: 'var(--danger-bg)',
-                color: 'var(--danger)',
-                padding: '10px 14px',
-                borderRadius: 'var(--radius-sm)',
-                fontSize: '0.85rem',
-                marginBottom: '16px',
-              }}>
-                {error}
-              </div>
-            )}
+            {error && <div className="availability-form-error"><i className="fas fa-exclamation-circle" /> {error}</div>}
 
             <form onSubmit={handleSubmit}>
               <div className="form-group">
-                <label className="form-label">Día de la Semana</label>
-                <select
-                  name="diaSemana"
-                  className="form-select"
-                  value={form.diaSemana}
-                  onChange={handleChange}
-                >
-                  {DIAS.map((d) => (
-                    <option key={d} value={d}>{d}</option>
-                  ))}
+                <label className="form-label">Día de la semana</label>
+                <select name="diaSemana" className="form-select" value={form.diaSemana} onChange={handleChange} disabled={Boolean(editing)}>
+                  {DIAS.map((d) => <option key={d} value={d}>{d}</option>)}
                 </select>
               </div>
 
               <div className="form-row">
                 <div className="form-group">
-                  <label className="form-label">Hora Inicio</label>
+                  <label className="form-label">Desde</label>
                   <input
                     type="time"
                     name="horaInicio"
@@ -223,7 +217,7 @@ export default function Disponibilidad() {
                   />
                 </div>
                 <div className="form-group">
-                  <label className="form-label">Hora Fin</label>
+                  <label className="form-label">Hasta</label>
                   <input
                     type="time"
                     name="horaFin"
@@ -235,7 +229,7 @@ export default function Disponibilidad() {
               </div>
 
               <div className="form-group">
-                <label className="form-label">Intervalo (minutos)</label>
+                <label className="form-label">Duración de cada turno</label>
                 <select
                   name="intervaloMin"
                   className="form-select"
@@ -258,7 +252,7 @@ export default function Disponibilidad() {
                   {saving ? (
                     <><i className="fas fa-spinner fa-spin"></i> Guardando...</>
                   ) : (
-                    <><i className="fas fa-save"></i> {editing ? 'Actualizar' : 'Guardar'}</>
+                    <><i className="fas fa-check"></i> {editing ? 'Actualizar horario' : 'Guardar horario'}</>
                   )}
                 </button>
               </div>

@@ -79,11 +79,12 @@ export default function Agenda() {
 
   async function handleCambiarEstado(turno, nuevoEstado) {
     try {
-      const payload = { idTurno: turno.idTurno, estado: nuevoEstado };
+      const acciones = { Confirmado: 'confirmar', Cancelado: 'cancelar', Finalizado: 'finalizar' };
+      const payload = { idTurno: turno.idTurno, accion: acciones[nuevoEstado] };
       if (nuevoEstado === 'Cancelado') {
         const motivo = window.prompt('Motivo de cancelación:');
         if (motivo === null) return;
-        payload.motivoCancelacion = motivo;
+        payload.motivo = motivo;
       }
       await turnos.update(payload);
       setSelectedTurno(null);
@@ -94,40 +95,33 @@ export default function Agenda() {
   }
 
   const hoy = formatDate(new Date());
+  const totalSemana = turnosList.length;
+  const confirmados = turnosList.filter((t) => String(t.estado).toLowerCase() === 'confirmado').length;
 
   return (
-    <div>
-      <div className="page-header">
+    <div className="agenda-page pro-module-page">
+      <section className="module-hero agenda-module-hero">
         <div>
-          <h2><i className="fas fa-calendar-alt"></i> Agenda Semanal</h2>
-          <p>Vista semanal de todos tus turnos.</p>
+          <span className="module-kicker">AGENDA OPERATIVA</span>
+          <h2>Semana de trabajo</h2>
+          <p>Revisá tus próximas atenciones y gestioná cada turno desde un solo lugar.</p>
         </div>
-      </div>
+        <div className="agenda-hero-summary"><div><span>Turnos</span><strong>{totalSemana}</strong></div><div><span>Confirmados</span><strong>{confirmados}</strong></div></div>
+      </section>
 
-      <div className="calendar-header">
+      <section className="agenda-toolbar">
+        <div><span>SEMANA ACTUAL</span><h3>{formatDateShort(weekDates[0])} — {formatDateShort(weekDates[6])} <small>{weekDates[0].getFullYear()}</small></h3></div>
         <div className="calendar-nav">
-          <button onClick={prevWeek}>
-            <i className="fas fa-chevron-left"></i>
-          </button>
-          <button onClick={goToday} style={{ width: 'auto', padding: '0 12px', fontSize: '0.8rem' }}>
-            Hoy
-          </button>
-          <button onClick={nextWeek}>
-            <i className="fas fa-chevron-right"></i>
-          </button>
+          <button onClick={prevWeek} title="Semana anterior"><i className="fas fa-chevron-left" /></button>
+          <button onClick={goToday} className="calendar-today">Ir a hoy</button>
+          <button onClick={nextWeek} title="Semana siguiente"><i className="fas fa-chevron-right" /></button>
         </div>
-        <h3 style={{ fontSize: '1.1rem', fontWeight: '600' }}>
-          {formatDateShort(weekDates[0])} — {formatDateShort(weekDates[6])}{' '}
-          <span style={{ color: 'var(--text-muted)' }}>
-            {weekDates[0].getFullYear()}
-          </span>
-        </h3>
-      </div>
+      </section>
 
       {loading ? (
         <div className="spinner"></div>
       ) : (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '12px' }}>
+        <section className="modern-week-grid">
           {weekDates.map((date, i) => {
             const fechaStr = formatDate(date);
             const esHoy = fechaStr === hoy;
@@ -135,83 +129,45 @@ export default function Agenda() {
             const dayIndex = date.getDay();
 
             return (
-              <div
-                key={i}
-                className="card"
-                style={{
-                  padding: '16px',
-                  borderColor: esHoy ? 'var(--primary)' : undefined,
-                  minHeight: '200px',
-                }}
-              >
-                <div style={{
-                  textAlign: 'center',
-                  marginBottom: '12px',
-                  paddingBottom: '12px',
-                  borderBottom: '1px solid var(--border)',
-                }}>
-                  <div style={{
-                    fontSize: '0.75rem',
-                    color: esHoy ? 'var(--accent)' : 'var(--text-muted)',
-                    fontWeight: '600',
-                    textTransform: 'uppercase',
-                  }}>
-                    {DIAS_SEMANA[dayIndex]}
-                  </div>
-                  <div style={{
-                    fontSize: '1.4rem',
-                    fontWeight: '800',
-                    color: esHoy ? 'var(--primary)' : 'var(--text-primary)',
-                  }}>
-                    {date.getDate()}
-                  </div>
-                </div>
-
+              <article key={i} className={`modern-day-column ${esHoy ? 'is-today' : ''}`}>
+                <header><span>{DIAS_SEMANA[dayIndex]}</span><strong>{date.getDate()}</strong>{esHoy && <small>HOY</small>}</header>
+                <div className="modern-day-events">
                 {turnosDelDia.length === 0 ? (
-                  <p style={{
-                    textAlign: 'center',
-                    fontSize: '0.75rem',
-                    color: 'var(--text-muted)',
-                    marginTop: '16px',
-                  }}>
-                    Sin turnos
-                  </p>
+                  <div className="agenda-day-empty"><i className="fas fa-minus" /><span>Sin turnos</span></div>
                 ) : (
                   turnosDelDia.map((t) => (
-                    <div
-                      key={t.idTurno}
-                      className={`calendar-event ${(t.estado || '').toLowerCase()}`}
-                      onClick={() => setSelectedTurno(t)}
-                    >
-                      <div style={{ fontWeight: '700' }}>{t.horaInicio}</div>
-                      <div>{t.nombreCliente || t.cliente || 'Cliente'}</div>
-                    </div>
+                    <button key={t.idTurno} className={`modern-calendar-event ${(t.estado || '').toLowerCase()}`} onClick={() => setSelectedTurno(t)}>
+                      <time>{String(t.horaInicio).slice(0, 5)}</time>
+                      <strong>{t.cliente_nombre ? `${t.cliente_nombre} ${t.cliente_apellido || ''}` : t.nombreCliente || t.cliente || 'Cliente'}</strong>
+                      <span>{t.servicio_nombre || t.nombreServicio || t.servicio || 'Servicio'}</span>
+                    </button>
                   ))
                 )}
-              </div>
+                </div>
+              </article>
             );
           })}
-        </div>
+        </section>
       )}
 
       {selectedTurno && (
-        <div className="modal-overlay" onClick={() => setSelectedTurno(null)}>
-          <div className="modal" onClick={(e) => e.stopPropagation()}>
+        <div className="modal-overlay module-modal-overlay" onClick={() => setSelectedTurno(null)}>
+          <div className="modal module-modal appointment-modal" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
-              <h3>Detalle del Turno</h3>
+              <div><span>DETALLE DE ATENCIÓN</span><h3>{String(selectedTurno.horaInicio).slice(0, 5)} · {selectedTurno.fecha}</h3></div>
               <button className="modal-close" onClick={() => setSelectedTurno(null)}>
                 <i className="fas fa-times"></i>
               </button>
             </div>
 
-            <div style={{ marginBottom: '20px' }}>
+            <div className="appointment-detail-grid">
               <div className="form-group">
                 <label className="form-label">Cliente</label>
-                <p>{selectedTurno.nombreCliente || selectedTurno.cliente || '-'}</p>
+                <p>{selectedTurno.cliente_nombre ? `${selectedTurno.cliente_nombre} ${selectedTurno.cliente_apellido || ''}` : selectedTurno.nombreCliente || selectedTurno.cliente || '-'}</p>
               </div>
               <div className="form-group">
                 <label className="form-label">Servicio</label>
-                <p>{selectedTurno.nombreServicio || selectedTurno.servicio || '-'}</p>
+                <p>{selectedTurno.servicio_nombre || selectedTurno.nombreServicio || selectedTurno.servicio || '-'}</p>
               </div>
               <div className="form-row">
                 <div className="form-group">

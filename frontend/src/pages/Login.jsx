@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
+import logoSmartAgendaDark from '../assets/smartagenda-logo-dark.png';
 
 export default function Login() {
   const [email, setEmail] = useState('');
@@ -32,33 +33,32 @@ export default function Login() {
   }
 
   return (
-    <div className="auth-page">
+    <div className="auth-page login-page">
       <button className="theme-toggle-fixed" onClick={toggleTheme} title="Cambiar tema">
         {theme === 'dark' ? '☀️' : '🌙'}
       </button>
 
       <div className="auth-split">
         <div className="auth-panel-left">
-          <Link to="/" className="auth-brand">
-            <div className="auth-brand-icon">📅</div>
-            <span>SmartAgenda Pro</span>
-          </Link>
+          <Link to="/" className="auth-brand"><img src={logoSmartAgendaDark} alt="SmartAgenda Pro" /></Link>
           <div className="auth-panel-quote">
-            <h2>Gestioná tu agenda profesional con facilidad</h2>
+            <span className="login-eyebrow">TU AGENDA, EN ORDEN</span>
+            <h2>Volvé a enfocarte en atender, no en coordinar.</h2>
             <p>Turnos, clientes y servicios en un solo lugar.</p>
           </div>
           <div className="auth-panel-bubbles">
-            <div className="auth-bubble">✂️ Peluquería</div>
-            <div className="auth-bubble">🐾 Veterinaria</div>
-            <div className="auth-bubble">🦷 Odontología</div>
-            <div className="auth-bubble">🏋️ Gimnasio</div>
+            <div className="auth-bubble"><i className="fas fa-scissors" /> Peluquería</div>
+            <div className="auth-bubble"><i className="fas fa-paw" /> Veterinaria</div>
+            <div className="auth-bubble"><i className="fas fa-tooth" /> Odontología</div>
+            <div className="auth-bubble"><i className="fas fa-dumbbell" /> Gimnasio</div>
           </div>
         </div>
 
         <div className="auth-panel-right">
           <div className="auth-form-container">
+            <span className="login-form-kicker">BIENVENIDO DE NUEVO</span>
             <h1 className="auth-title">Iniciar sesión</h1>
-            <p className="auth-subtitle">Ingresá tus datos para continuar</p>
+            <p className="auth-subtitle">Ingresá tus datos para abrir tu agenda.</p>
 
             {error && (
               <div className="auth-error">
@@ -114,11 +114,11 @@ export default function Login() {
               ¿No tenés cuenta? <Link to="/register">Registrate aquí</Link>
             </p>
 
-            <div className="auth-demo">
-              <p><strong>Demo:</strong></p>
-              <p>Admin: admin@smartagenda.com / admin123</p>
-              <p>Profesional: martinez@smartagenda.com / prof123</p>
-              <p>Cliente: juanperez@smartagenda.com / cliente123</p>
+            <div className="auth-demo login-demo">
+              <div><i className="fas fa-flask" /><strong> Accesos de demostración</strong></div>
+              <p><b>Administrador</b><span>admin@smartagenda.com · admin123</span></p>
+              <p><b>Profesional</b><span>martinez@smartagenda.com · prof123</span></p>
+              <p><b>Cliente</b><span>juanperez@smartagenda.com · cliente123</span></p>
             </div>
           </div>
         </div>

@@ -108,73 +108,62 @@ export default function Servicios() {
 
   if (loading) return <div className="spinner"></div>;
 
+  const precioPromedio = lista.length ? lista.reduce((sum, s) => sum + Number(s.precio || 0), 0) / lista.length : 0;
+  const duracionPromedio = lista.length ? Math.round(lista.reduce((sum, s) => sum + Number(s.duracionMin || 0), 0) / lista.length) : 0;
+
   return (
-    <div>
-      <div className="page-header">
+    <div className="services-page pro-module-page">
+      <section className="module-hero">
         <div>
-          <h2><i className="fas fa-concierge-bell"></i> Mis Servicios</h2>
-          <p>Gestioná los servicios que ofrecés a tus clientes.</p>
+          <span className="module-kicker">CATÁLOGO PROFESIONAL</span>
+          <h2>Servicios</h2>
+          <p>Organizá lo que ofrecés, su duración y el valor de cada atención.</p>
         </div>
-        <button className="btn btn-primary" onClick={openCreate}>
-          <i className="fas fa-plus"></i> Nuevo Servicio
+        <button className="module-primary-btn" onClick={openCreate}>
+          <i className="fas fa-plus"></i> Nuevo servicio
         </button>
-      </div>
+      </section>
+
+      <section className="module-summary-strip">
+        <div><span>Servicios activos</span><strong>{lista.length}</strong></div>
+        <div><span>Duración promedio</span><strong>{duracionPromedio} min</strong></div>
+        <div><span>Valor promedio</span><strong>${Math.round(precioPromedio).toLocaleString('es-AR')}</strong></div>
+        <p><i className="fas fa-info-circle" /> Estos servicios aparecen al momento de reservar.</p>
+      </section>
 
       {lista.length === 0 ? (
-        <div className="empty-state">
-          <i className="fas fa-concierge-bell"></i>
-          <h3>Sin servicios</h3>
-          <p>Creá tu primer servicio para que los clientes puedan reservar.</p>
-        </div>
+        <section className="module-empty-state"><div><i className="fas fa-briefcase" /></div><h3>Creá tu primer servicio</h3><p>Definí qué ofrecés para habilitar las reservas de tus clientes.</p><button onClick={openCreate}>Agregar servicio</button></section>
       ) : (
-        <div className="services-grid">
-          {lista.map((s) => (
-            <div key={s.idServicio} className="service-card">
-              <h3>{s.nombre}</h3>
-              <p>{s.descripcion || 'Sin descripción'}</p>
-              <div className="service-card-meta">
-                <span className="service-card-price">
-                  ${Number(s.precio).toLocaleString('es-AR')}
-                </span>
-                <span className="service-card-duration">
-                  <i className="fas fa-clock"></i> {s.duracionMin} min
-                </span>
-              </div>
-              <div className="service-card-actions">
-                <button className="btn btn-outline btn-sm" onClick={() => openEdit(s)}>
-                  <i className="fas fa-edit"></i> Editar
-                </button>
-                <button className="btn btn-danger btn-sm" onClick={() => handleDelete(s)}>
-                  <i className="fas fa-trash"></i> Eliminar
-                </button>
-              </div>
-            </div>
-          ))}
-        </div>
+        <section className="service-catalog">
+          <header><div><span>CATÁLOGO ACTIVO</span><h3>Servicios disponibles</h3></div><small>{lista.length} {lista.length === 1 ? 'servicio' : 'servicios'}</small></header>
+          <div className="service-catalog-list">
+            {lista.map((s, index) => (
+              <article key={s.idServicio} className="service-row-card">
+                <div className="service-row-number">{String(index + 1).padStart(2, '0')}</div>
+                <div className="service-row-info"><h3>{s.nombre}</h3><p>{s.descripcion || 'Sin descripción agregada.'}</p></div>
+                <div className="service-row-duration"><span>Duración</span><strong><i className="far fa-clock" /> {s.duracionMin} min</strong></div>
+                <div className="service-row-price"><span>Valor</span><strong>${Number(s.precio).toLocaleString('es-AR')}</strong></div>
+                <div className="service-row-actions">
+                  <button onClick={() => openEdit(s)} title={`Editar ${s.nombre}`}><i className="fas fa-pen" /></button>
+                  <button className="delete" onClick={() => handleDelete(s)} title={`Eliminar ${s.nombre}`}><i className="far fa-trash-alt" /></button>
+                </div>
+              </article>
+            ))}
+          </div>
+        </section>
       )}
 
       {showModal && (
-        <div className="modal-overlay" onClick={closeModal}>
-          <div className="modal" onClick={(e) => e.stopPropagation()}>
+        <div className="modal-overlay module-modal-overlay" onClick={closeModal}>
+          <div className="modal module-modal" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
-              <h3>{editing ? 'Editar Servicio' : 'Nuevo Servicio'}</h3>
+              <div><span>{editing ? 'ACTUALIZAR SERVICIO' : 'NUEVO SERVICIO'}</span><h3>{editing ? editing.nombre : 'Crear servicio'}</h3></div>
               <button className="modal-close" onClick={closeModal}>
                 <i className="fas fa-times"></i>
               </button>
             </div>
 
-            {error && (
-              <div style={{
-                background: 'var(--danger-bg)',
-                color: 'var(--danger)',
-                padding: '10px 14px',
-                borderRadius: 'var(--radius-sm)',
-                fontSize: '0.85rem',
-                marginBottom: '16px',
-              }}>
-                {error}
-              </div>
-            )}
+            {error && <div className="module-form-error"><i className="fas fa-exclamation-circle" /> {error}</div>}
 
             <form onSubmit={handleSubmit}>
               <div className="form-group">
@@ -236,7 +225,7 @@ export default function Servicios() {
                   {saving ? (
                     <><i className="fas fa-spinner fa-spin"></i> Guardando...</>
                   ) : (
-                    <><i className="fas fa-save"></i> {editing ? 'Actualizar' : 'Crear'}</>
+                    <><i className="fas fa-check"></i> {editing ? 'Actualizar servicio' : 'Crear servicio'}</>
                   )}
                 </button>
               </div>

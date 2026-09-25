@@ -10,9 +10,12 @@ export default function Header() {
 
   return (
     <header className="header">
-      <div className="header-welcome">
-        <h1>Bienvenido, {user?.nombre}</h1>
-        <p>{today}</p>
+      <div className="header-context">
+        <span>ESPACIO PROFESIONAL</span>
+        <div className="header-welcome">
+          <h1>Hola, {user?.nombre}</h1>
+          <p><i className="far fa-calendar" /> {today}</p>
+        </div>
       </div>
       <div className="header-actions">
         <button
