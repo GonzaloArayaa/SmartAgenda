@@ -1,13 +1,14 @@
 import { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { turnos } from '../services/api';
 
-const FILTROS = ['Todos', 'Pendiente', 'Confirmado', 'Cancelado', 'Finalizado'];
+const FILTROS = [{ key:'todos', label:'Todos' },{ key:'pendiente', label:'Pendientes' },{ key:'confirmado', label:'Confirmados' },{ key:'cancelado', label:'Cancelados' },{ key:'finalizado', label:'Finalizados' }];
 
 export default function MisTurnos() {
   const { user } = useAuth();
   const [lista, setLista] = useState([]);
-  const [filtro, setFiltro] = useState('Todos');
+  const [filtro, setFiltro] = useState('todos');
   const [loading, setLoading] = useState(true);
 
   async function fetchTurnos() {
@@ -34,8 +35,8 @@ export default function MisTurnos() {
     try {
       await turnos.update({
         idTurno: turno.idTurno,
-        estado: 'Cancelado',
-        motivoCancelacion: motivo,
+        accion: 'cancelar',
+        motivo,
       });
       fetchTurnos();
     } catch (err) {
@@ -43,93 +44,54 @@ export default function MisTurnos() {
     }
   }
 
-  const filtrados = filtro === 'Todos'
+  const filtrados = filtro === 'todos'
     ? lista
-    : lista.filter((t) => t.estado === filtro);
+    : lista.filter((t) => String(t.estado).toLowerCase() === filtro);
+  const hoy = new Date().toISOString().split('T')[0];
+  const proximos = lista.filter((t) => t.fecha >= hoy && !['cancelado','finalizado'].includes(String(t.estado).toLowerCase())).length;
+  const nombreProfesional = (t) => t.nombreNegocio || (t.profesional_nombre ? `${t.profesional_nombre} ${t.profesional_apellido || ''}` : t.nombreProfesional || t.profesional || 'Profesional');
+  const nombreServicio = (t) => t.servicio_nombre || t.nombreServicio || t.servicio || 'Servicio';
 
   if (loading) return <div className="spinner"></div>;
 
   return (
-    <div>
-      <div className="page-header">
+    <div className="appointments-page client-module-page">
+      <section className="client-section-hero">
         <div>
-          <h2><i className="fas fa-calendar-check"></i> Mis Turnos</h2>
-          <p>Consultá y gestioná todos tus turnos reservados.</p>
+          <span className="client-kicker">TUS RESERVAS</span>
+          <h2>Mis turnos</h2>
+          <p>Consultá el estado de cada reserva y administrá tus próximas visitas.</p>
         </div>
-      </div>
+        <div className="appointments-hero-count"><strong>{proximos}</strong><span>próximos</span></div>
+      </section>
 
-      <div className="filter-tabs">
+      <div className="appointments-filter-tabs">
         {FILTROS.map((f) => (
           <button
-            key={f}
-            className={`filter-tab ${filtro === f ? 'active' : ''}`}
-            onClick={() => setFiltro(f)}
+            key={f.key}
+            className={filtro === f.key ? 'active' : ''}
+            onClick={() => setFiltro(f.key)}
           >
-            {f}
+            {f.label}<span>{f.key === 'todos' ? lista.length : lista.filter(t => String(t.estado).toLowerCase() === f.key).length}</span>
           </button>
         ))}
       </div>
 
       {filtrados.length === 0 ? (
-        <div className="empty-state">
-          <i className="fas fa-inbox"></i>
-          <h3>No hay turnos</h3>
-          <p>
-            {filtro === 'Todos'
-              ? 'Todavía no tenés turnos. ¡Buscá un profesional y reservá!'
-              : `No tenés turnos con estado "${filtro}".`}
-          </p>
-        </div>
+        <section className="client-empty-state"><div><i className="far fa-calendar" /></div><h3>No hay turnos en esta vista</h3><p>{filtro === 'todos' ? 'Todavía no tenés reservas. Encontrá un profesional para comenzar.' : 'No tenés reservas con este estado.'}</p>{filtro === 'todos' && <Link to="/buscar">Buscar profesionales</Link>}</section>
       ) : (
-        <div className="table-container">
-          <table className="table">
-            <thead>
-              <tr>
-                <th>Profesional</th>
-                <th>Servicio</th>
-                <th>Fecha</th>
-                <th>Hora</th>
-                <th>Estado</th>
-                <th>Acciones</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filtrados.map((t) => (
-                <tr key={t.idTurno}>
-                  <td>{t.nombreProfesional || t.profesional || '-'}</td>
-                  <td>{t.nombreServicio || t.servicio || '-'}</td>
-                  <td>{t.fecha}</td>
-                  <td>{t.horaInicio}</td>
-                  <td>
-                    <span className={`badge badge-${(t.estado || '').toLowerCase()}`}>
-                      {t.estado}
-                    </span>
-                  </td>
-                  <td>
-                    {(t.estado === 'Pendiente' || t.estado === 'Confirmado') && (
-                      <button
-                        className="btn btn-danger btn-sm"
-                        onClick={() => handleCancelar(t)}
-                      >
-                        <i className="fas fa-times"></i> Cancelar
-                      </button>
-                    )}
-                    {t.estado === 'Cancelado' && (
-                      <span style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>
-                        —
-                      </span>
-                    )}
-                    {t.estado === 'Finalizado' && (
-                      <span style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>
-                        Completado
-                      </span>
-                    )}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <section className="appointment-card-list">
+          {filtrados.map((t) => {
+            const estado = String(t.estado).toLowerCase();
+            const fecha = new Date(`${t.fecha}T12:00:00`);
+            return <article key={t.idTurno} className={`client-appointment-card status-${estado}`}>
+              <div className="client-appointment-date"><strong>{fecha.getDate()}</strong><span>{fecha.toLocaleDateString('es-AR',{month:'short'}).toUpperCase()}</span><small>{fecha.getFullYear()}</small></div>
+              <div className="client-appointment-main"><span>{nombreServicio(t)}</span><h3>{nombreProfesional(t)}</h3><p><i className="far fa-clock" /> {String(t.horaInicio).slice(0,5)} hs</p></div>
+              <div className="client-appointment-status"><span className={`badge badge-${estado}`}>{t.estado}</span><small>Reserva #{t.idTurno}</small></div>
+              <div className="client-appointment-action">{['pendiente','confirmado'].includes(estado) ? <button onClick={() => handleCancelar(t)}><i className="fas fa-times" /> Cancelar</button> : <span>{estado === 'finalizado' ? <><i className="fas fa-check" /> Completado</> : 'Sin acciones'}</span>}</div>
+            </article>;
+          })}
+        </section>
       )}
     </div>
   );

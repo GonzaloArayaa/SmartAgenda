@@ -1,9 +1,9 @@
-import { NavLink, useLocation } from 'react-router-dom';
+import { NavLink } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
+import logoSmartAgendaDark from '../../assets/smartagenda-logo-dark.png';
 
 export default function Sidebar() {
   const { user, logout } = useAuth();
-  const location = useLocation();
   const rol = user?.rol;
 
   const menuItems = {
@@ -36,15 +36,11 @@ export default function Sidebar() {
   return (
     <aside className="sidebar">
       <div className="sidebar-brand">
-        <div className="sidebar-brand-icon">📅</div>
-        <div>
-          <h2>SmartAgenda Pro</h2>
-          <span>Agenda Inteligente</span>
-        </div>
+        <img src={logoSmartAgendaDark} alt="SmartAgenda Pro" />
       </div>
 
       <nav className="sidebar-nav">
-        <p className="sidebar-section">Menú Principal</p>
+        <p className="sidebar-section">Espacio de trabajo</p>
         {items.map((item) => (
           <NavLink
             key={item.to}
@@ -58,14 +54,14 @@ export default function Sidebar() {
       </nav>
 
       <div className="sidebar-user">
-        <div className="sidebar-avatar">{initials}</div>
-        <div className="sidebar-user-info">
-          <p>{user?.nombre} {user?.apellido}</p>
-          <span>{rol}</span>
+        <div className="sidebar-user-main">
+          <div className="sidebar-avatar">{initials}</div>
+          <div className="sidebar-user-info">
+            <p>{user?.nombre} {user?.apellido}</p>
+            <span className="sidebar-role-pill"><i className="fas fa-circle" /> {rol}</span>
+          </div>
         </div>
-        <button className="sidebar-logout" onClick={logout} title="Cerrar sesión">
-          <i className="fas fa-sign-out-alt"></i>
-        </button>
+        <button className="sidebar-logout" onClick={logout} title="Cerrar sesión"><i className="fas fa-sign-out-alt"></i></button>
       </div>
     </aside>
   );

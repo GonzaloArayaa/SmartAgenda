@@ -16,6 +16,7 @@ ChartJS.register(ArcElement, Tooltip, Legend, CategoryScale, LinearScale, BarEle
 
 export default function Reportes() {
   const { user } = useAuth();
+  const isAdmin = user?.rol === 'Administrador';
   const [fechaDesde, setFechaDesde] = useState('');
   const [fechaHasta, setFechaHasta] = useState('');
   const [stats, setStats] = useState(null);
@@ -45,8 +46,11 @@ export default function Reportes() {
     fetchStats();
   }
 
-  const turnosPorEstado = stats?.turnosPorEstado || {};
-  const serviciosMasSolicitados = stats?.serviciosMasSolicitados || [];
+  const estadosRaw = stats?.turnosPorEstado || {};
+  const turnosPorEstado = Array.isArray(estadosRaw)
+    ? estadosRaw.reduce((acc, item) => ({ ...acc, [String(item.estado).toLowerCase()]: Number(item.total || 0) }), {})
+    : estadosRaw;
+  const serviciosMasSolicitados = stats?.serviciosTop || stats?.serviciosMasSolicitados || [];
 
   const doughnutData = {
     labels: ['Pendiente', 'Confirmado', 'Cancelado', 'Finalizado'],
@@ -58,9 +62,9 @@ export default function Reportes() {
           turnosPorEstado.Cancelado || turnosPorEstado.cancelado || 0,
           turnosPorEstado.Finalizado || turnosPorEstado.finalizado || 0,
         ],
-        backgroundColor: ['#FFB300', '#00C853', '#FF5252', '#448AFF'],
-        borderColor: ['#FFB300', '#00C853', '#FF5252', '#448AFF'],
-        borderWidth: 1,
+        backgroundColor: ['#E8B35A', '#55A980', '#D66B71', '#667B9F'],
+        borderColor: '#FFFDF9',
+        borderWidth: 3,
       },
     ],
   };
@@ -97,11 +101,11 @@ export default function Reportes() {
       {
         label: 'Cantidad de turnos',
         data: barValues.length > 0 ? barValues : [0],
-        backgroundColor: 'rgba(108, 99, 255, 0.6)',
-        borderColor: '#6C63FF',
-        borderWidth: 1,
-        borderRadius: 8,
-        hoverBackgroundColor: 'rgba(108, 99, 255, 0.9)',
+        backgroundColor: '#E96C4D',
+        borderColor: '#E96C4D',
+        borderWidth: 0,
+        borderRadius: 5,
+        hoverBackgroundColor: '#D75B3E',
       },
     ],
   };
@@ -135,19 +139,21 @@ export default function Reportes() {
   };
 
   return (
-    <div>
-      <div className="page-header">
+    <div className={`reports-page pro-module-page ${isAdmin ? 'admin-reports-page' : ''}`}>
+      <section className="module-hero reports-module-hero">
         <div>
-          <h2><i className="fas fa-chart-bar"></i> Reportes y Estadísticas</h2>
-          <p>Analizá el rendimiento de tu negocio.</p>
+          <span className="module-kicker">{isAdmin ? 'INTELIGENCIA DE PLATAFORMA' : 'ANÁLISIS DEL NEGOCIO'}</span>
+          <h2>{isAdmin ? 'Analítica general' : 'Reportes'}</h2>
+          <p>{isAdmin ? 'Supervisá la actividad global y detectá tendencias del sistema.' : 'Convertí la actividad de tu agenda en decisiones concretas.'}</p>
         </div>
-      </div>
+        <div className="report-hero-note"><i className={`fas ${isAdmin ? 'fa-database' : 'fa-chart-line'}`} /><span>{isAdmin ? 'Alcance del reporte' : 'Información actualizada'}</span><strong>{isAdmin ? 'Toda la plataforma' : 'Según el período elegido'}</strong></div>
+      </section>
 
-      <div className="card" style={{ marginBottom: '24px' }}>
-        <h3 className="section-title">
-          <i className="fas fa-filter"></i> Filtrar por Fecha
-        </h3>
-        <div className="form-row">
+      {isAdmin && <aside className="admin-report-scope"><i className="fas fa-shield-alt" /><div><strong>Vista administrativa global</strong><span>Las métricas incluyen la actividad de todos los profesionales y clientes registrados.</span></div></aside>}
+
+      <section className="report-filter-bar">
+        <div className="report-filter-title"><i className="fas fa-sliders-h" /><div><span>PERÍODO</span><strong>Filtrar resultados</strong></div></div>
+        <div className="report-filter-fields">
           <div className="form-group">
             <label className="form-label">Desde</label>
             <input
@@ -167,66 +173,37 @@ export default function Reportes() {
             />
           </div>
         </div>
-        <button className="btn btn-primary" onClick={handleFiltrar}>
-          <i className="fas fa-search"></i> Filtrar
+        <button className="module-primary-btn" onClick={handleFiltrar}>
+          <i className="fas fa-check"></i> Aplicar período
         </button>
-      </div>
+      </section>
 
       {loading ? (
         <div className="spinner"></div>
       ) : (
         <>
-          <div className="stats-grid">
-            <div className="stat-card">
-              <div className="stat-card-info">
-                <h3>Tasa Ocupación</h3>
-                <p>{stats?.tasaOcupacion ?? 0}%</p>
-              </div>
-              <div className="stat-card-icon green">
-                <i className="fas fa-chart-pie"></i>
-              </div>
-            </div>
+          <section className="report-metrics-grid">
+            <article><span>OCUPACIÓN</span><strong>{stats?.tasaOcupacion ?? 0}%</strong><small>{isAdmin ? 'Rendimiento global' : 'Uso efectivo de agenda'}</small><i className="fas fa-chart-pie" /></article>
+            <article><span>TOTAL DE TURNOS</span><strong>{stats?.totalTurnos ?? 0}</strong><small>En el período seleccionado</small><i className="far fa-calendar-check" /></article>
+            <article><span>VOLUMEN GENERADO</span><strong>${Number(stats?.ingresos ?? 0).toLocaleString('es-AR')}</strong><small>{isAdmin ? 'Actividad de la plataforma' : 'Confirmados y finalizados'}</small><i className="fas fa-dollar-sign" /></article>
+            <article><span>CANCELACIONES</span><strong>{stats?.totalCancelaciones ?? stats?.cancelaciones ?? 0}</strong><small>Turnos que no se realizaron</small><i className="fas fa-times" /></article>
+          </section>
 
-            <div className="stat-card">
-              <div className="stat-card-info">
-                <h3>Total Turnos</h3>
-                <p>{stats?.totalTurnos ?? 0}</p>
-              </div>
-              <div className="stat-card-icon purple">
-                <i className="fas fa-calendar-check"></i>
-              </div>
-            </div>
-
-            <div className="stat-card">
-              <div className="stat-card-info">
-                <h3>Cancelaciones</h3>
-                <p>{stats?.cancelaciones ?? 0}</p>
-              </div>
-              <div className="stat-card-icon red">
-                <i className="fas fa-times-circle"></i>
-              </div>
-            </div>
-          </div>
-
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
-            <div className="card">
-              <h3 className="section-title">
-                <i className="fas fa-chart-pie"></i> Turnos por Estado
-              </h3>
-              <div style={{ height: '300px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <section className="report-charts-grid">
+            <article className="report-chart-card">
+              <header><span>DISTRIBUCIÓN</span><h3>Turnos por estado</h3></header>
+              <div className="report-chart-canvas report-doughnut">
                 <Doughnut data={doughnutData} options={doughnutOptions} />
               </div>
-            </div>
+            </article>
 
-            <div className="card">
-              <h3 className="section-title">
-                <i className="fas fa-chart-bar"></i> Servicios Más Solicitados
-              </h3>
-              <div style={{ height: '300px' }}>
+            <article className="report-chart-card">
+              <header><span>DEMANDA</span><h3>Servicios más solicitados</h3></header>
+              <div className="report-chart-canvas">
                 <Bar data={barData} options={barOptions} />
               </div>
-            </div>
-          </div>
+            </article>
+          </section>
         </>
       )}
     </div>

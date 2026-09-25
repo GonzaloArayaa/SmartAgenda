@@ -35,14 +35,19 @@ export default function Perfil() {
     return ((form.nombre?.[0] || '') + (form.apellido?.[0] || '')).toUpperCase();
   }
 
+  const camposCompletos = [form.nombre, form.apellido, form.email, form.telefono, form.nombreNegocio, form.descripcion].filter(Boolean).length;
+  const completitud = Math.round((camposCompletos / 6) * 100);
+
   return (
-    <div>
-      <div className="page-header">
+    <div className="profile-page pro-module-page">
+      <section className="module-hero profile-module-hero">
         <div>
-          <h2><i className="fas fa-user-circle"></i> Mi Perfil</h2>
-          <p>Consultá y editá tu información personal.</p>
+          <span className="module-kicker">IDENTIDAD PROFESIONAL</span>
+          <h2>Perfil</h2>
+          <p>Mantené actualizados tus datos personales y la información de tu negocio.</p>
         </div>
-      </div>
+        <div className="profile-completion"><span>Perfil completo</span><strong>{completitud}%</strong><div><i style={{ width:`${completitud}%` }} /></div></div>
+      </section>
 
       {toast && (
         <div className="toast-container">
@@ -52,39 +57,19 @@ export default function Perfil() {
         </div>
       )}
 
-      <div style={{ display: 'grid', gridTemplateColumns: '280px 1fr', gap: '24px', alignItems: 'start' }}>
-        <div className="card" style={{ textAlign: 'center', padding: '32px 24px' }}>
-          <div style={{
-            width: '80px',
-            height: '80px',
-            background: 'var(--gradient)',
-            borderRadius: '50%',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            fontSize: '1.8rem',
-            fontWeight: '700',
-            color: 'white',
-            margin: '0 auto 16px',
-            boxShadow: '0 8px 30px rgba(108, 99, 255, 0.3)',
-          }}>
-            {getInitials()}
-          </div>
-          <h3 style={{ fontSize: '1.1rem', fontWeight: '700', marginBottom: '4px' }}>
-            {form.nombre} {form.apellido}
-          </h3>
-          <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', marginBottom: '8px' }}>
-            {form.email}
-          </p>
-          <span className={`badge badge-${user?.rol === 'Administrador' ? 'confirmado' : user?.rol === 'Profesional' ? 'pendiente' : 'finalizado'}`}>
-            {user?.rol}
-          </span>
-        </div>
+      <div className="profile-layout">
+        <aside className="profile-identity-card">
+          <div className="profile-avatar">{getInitials()}</div>
+          <span className="profile-status"><i className="fas fa-circle" /> CUENTA ACTIVA</span>
+          <h3>{form.nombre} {form.apellido}</h3>
+          <p>{form.email}</p>
+          <div className="profile-role"><i className="fas fa-briefcase" /><div><span>Tipo de cuenta</span><strong>{user?.rol}</strong></div></div>
+          {form.nombreNegocio && <div className="profile-role"><i className="fas fa-store" /><div><span>Negocio</span><strong>{form.nombreNegocio}</strong></div></div>}
+          <div className="profile-security-note"><i className="fas fa-shield-alt" /><span>Tu email funciona como identificación de acceso.</span></div>
+        </aside>
 
-        <div className="card">
-          <h3 className="section-title" style={{ marginBottom: '24px' }}>
-            <i className="fas fa-edit"></i> Información Personal
-          </h3>
+        <section className="profile-form-card">
+          <header><div><span>DATOS DE LA CUENTA</span><h3>Información personal</h3></div><i className="far fa-user" /></header>
 
           <form onSubmit={handleSubmit}>
             <div className="form-row">
@@ -111,23 +96,18 @@ export default function Perfil() {
             </div>
 
             <div className="form-group">
-              <label className="form-label">
-                <i className="fas fa-envelope"></i> Email
-              </label>
+              <label className="form-label">Email de acceso</label>
               <input
                 type="email"
                 name="email"
-                className="form-input"
                 value={form.email}
                 readOnly
-                style={{ opacity: 0.6, cursor: 'not-allowed' }}
+                className="form-input profile-readonly"
               />
             </div>
 
             <div className="form-group">
-              <label className="form-label">
-                <i className="fas fa-phone"></i> Teléfono
-              </label>
+              <label className="form-label">Teléfono</label>
               <input
                 type="tel"
                 name="telefono"
@@ -140,10 +120,9 @@ export default function Perfil() {
 
             {user?.rol === 'Profesional' && (
               <>
+                <div className="profile-form-divider"><span>INFORMACIÓN PROFESIONAL</span></div>
                 <div className="form-group">
-                  <label className="form-label">
-                    <i className="fas fa-store"></i> Nombre del Negocio
-                  </label>
+                  <label className="form-label">Nombre del negocio</label>
                   <input
                     type="text"
                     name="nombreNegocio"
@@ -154,23 +133,18 @@ export default function Perfil() {
                 </div>
 
                 <div className="form-group">
-                  <label className="form-label">
-                    <i className="fas fa-briefcase"></i> Rubro
-                  </label>
+                  <label className="form-label">Rubro</label>
                   <input
                     type="text"
                     name="rubro"
-                    className="form-input"
                     value={form.rubro}
                     readOnly
-                    style={{ opacity: 0.6, cursor: 'not-allowed' }}
+                    className="form-input profile-readonly"
                   />
                 </div>
 
                 <div className="form-group">
-                  <label className="form-label">
-                    <i className="fas fa-align-left"></i> Descripción
-                  </label>
+                  <label className="form-label">Descripción profesional</label>
                   <textarea
                     name="descripcion"
                     className="form-textarea"
@@ -182,15 +156,15 @@ export default function Perfil() {
               </>
             )}
 
-            <button type="submit" className="btn btn-primary btn-lg" disabled={saving}>
+            <div className="profile-form-actions"><span>Los cambios se aplicarán a tu perfil.</span><button type="submit" className="module-primary-btn" disabled={saving}>
               {saving ? (
                 <><i className="fas fa-spinner fa-spin"></i> Guardando...</>
               ) : (
                 <><i className="fas fa-save"></i> Guardar Cambios</>
               )}
-            </button>
+            </button></div>
           </form>
-        </div>
+        </section>
       </div>
     </div>
   );

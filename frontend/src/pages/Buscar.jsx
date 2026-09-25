@@ -28,7 +28,7 @@ export default function Buscar() {
       setLoading(true);
       try {
         const params = new URLSearchParams();
-        if (busqueda.trim()) params.append('busqueda', busqueda.trim());
+        if (busqueda.trim()) params.append('buscar', busqueda.trim());
         if (rubroFiltro) params.append('idRubro', rubroFiltro);
         const data = await profesionales.getAll(params.toString());
         setLista(Array.isArray(data) ? data : data.profesionales || []);
@@ -48,71 +48,41 @@ export default function Buscar() {
   }
 
   return (
-    <div>
-      <div className="page-header">
+    <div className="discovery-page client-module-page">
+      <section className="discovery-hero">
         <div>
-          <h2><i className="fas fa-search"></i> Buscar Profesionales</h2>
-          <p>Encontrá al profesional ideal y reservá tu turno.</p>
+          <span className="client-kicker">ENCONTRÁ TU PRÓXIMO TURNO</span>
+          <h2>Profesionales para vos</h2>
+          <p>Explorá opciones, compará especialidades y reservá en pocos pasos.</p>
         </div>
-      </div>
+        <div className="discovery-count"><strong>{lista.length}</strong><span>profesionales disponibles</span></div>
+      </section>
 
-      <div className="search-bar">
-        <input
-          type="text"
-          className="form-input"
-          placeholder="Buscar por nombre o negocio..."
-          value={busqueda}
-          onChange={(e) => setBusqueda(e.target.value)}
-        />
-        <select
-          className="form-select"
-          value={rubroFiltro}
-          onChange={(e) => setRubroFiltro(e.target.value)}
-        >
-          <option value="">Todos los rubros</option>
-          {rubros.map((r) => (
-            <option key={r.idRubro} value={r.idRubro}>
-              {r.nombre}
-            </option>
-          ))}
-        </select>
-      </div>
+      <section className="discovery-search-panel">
+        <div className="discovery-search-input"><i className="fas fa-search" /><input type="text" placeholder="Nombre, negocio o especialidad" value={busqueda} onChange={(e) => setBusqueda(e.target.value)} />{busqueda && <button onClick={() => setBusqueda('')} title="Limpiar"><i className="fas fa-times" /></button>}</div>
+        <div className="discovery-filter"><i className="fas fa-sliders-h" /><select value={rubroFiltro} onChange={(e) => setRubroFiltro(e.target.value)}><option value="">Todos los rubros</option>{rubros.map((r) => <option key={r.idRubro} value={r.idRubro}>{r.nombre}</option>)}</select></div>
+      </section>
 
       {loading ? (
         <div className="spinner"></div>
       ) : lista.length === 0 ? (
-        <div className="empty-state">
-          <i className="fas fa-user-slash"></i>
-          <h3>No se encontraron profesionales</h3>
-          <p>Probá con otros términos de búsqueda o cambiá el rubro.</p>
-        </div>
+        <section className="client-empty-state"><div><i className="fas fa-search" /></div><h3>No encontramos coincidencias</h3><p>Probá con otro nombre o seleccioná una especialidad diferente.</p><button onClick={() => { setBusqueda(''); setRubroFiltro(''); }}>Limpiar búsqueda</button></section>
       ) : (
-        <div className="prof-grid">
+        <section className="discovery-results">
+          <header><div><span>RESULTADOS</span><h3>Elegí dónde reservar</h3></div><small>Ordenados por disponibilidad</small></header>
+          <div className="professional-catalog-grid">
           {lista.map((prof) => (
-            <Link
-              key={prof.idProfesional}
-              to={`/reservar/${prof.idProfesional}`}
-              style={{ textDecoration: 'none' }}
-            >
-              <div className="prof-card">
-                <div className="prof-card-header">
-                  <div className="prof-card-avatar">
-                    {getInitials(prof.nombre, prof.apellido)}
-                  </div>
-                  <div>
-                    <div className="prof-card-name">
-                      {prof.nombreNegocio || `${prof.nombre} ${prof.apellido}`}
-                    </div>
-                    <div className="prof-card-rubro">
-                      {prof.nombreRubro || prof.rubro || 'General'}
-                    </div>
-                  </div>
-                </div>
-                <p>{prof.descripcion || 'Profesional disponible para reservas.'}</p>
+            <article key={prof.idProfesional} className="professional-discovery-card">
+              <div className="professional-card-top"><div className="professional-avatar">{getInitials(prof.nombre, prof.apellido)}</div><span className="professional-available"><i className="fas fa-circle" /> Disponible</span></div>
+              <div className="professional-card-body"><span>{prof.nombreRubro || prof.rubro || 'Atención general'}</span><h3>{prof.nombreNegocio || `${prof.nombre} ${prof.apellido}`}</h3><p>{prof.descripcion || 'Profesional disponible para recibir reservas.'}</p></div>
+              <div className="professional-card-footer">
+                <div><i className="fas fa-user-md" /><span>Profesional verificado</span></div>
+                <Link to={`/reservar/${prof.idProfesional}`}>Ver horarios <i className="fas fa-arrow-right" /></Link>
               </div>
-            </Link>
+            </article>
           ))}
-        </div>
+          </div>
+        </section>
       )}
     </div>
   );

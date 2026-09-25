@@ -3,24 +3,31 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { reportes } from '../services/api';
+import logoSmartAgendaDark from '../assets/smartagenda-logo-dark.png';
 
 // Step 1: choose account type
 function StepTipo({ onSelect }) {
   return (
     <div className="auth-form-container">
+      <span className="register-form-kicker">PASO 1 DE 2</span>
       <h1 className="auth-title">Crear cuenta</h1>
-      <p className="auth-subtitle">¿Cómo vas a usar SmartAgenda Pro?</p>
+      <p className="auth-subtitle">Elegí cómo querés comenzar a usar SmartAgenda Pro.</p>
       <div className="register-tipo-grid">
         <button className="register-tipo-card" onClick={() => onSelect('Cliente')}>
-          <span className="register-tipo-icon">👤</span>
+          <span className="register-tipo-icon"><i className="fas fa-calendar-check" /></span>
           <strong>Cliente</strong>
           <p>Buscá y reservá turnos con profesionales</p>
         </button>
         <button className="register-tipo-card" onClick={() => onSelect('Profesional')}>
-          <span className="register-tipo-icon">💼</span>
+          <span className="register-tipo-icon"><i className="fas fa-briefcase" /></span>
           <strong>Profesional</strong>
           <p>Gestioná tu agenda, servicios y clientes</p>
         </button>
+      </div>
+      <div className="register-account-benefits" aria-label="Beneficios de SmartAgenda">
+        <span><i className="fas fa-check" /> Sin tarjeta de crédito</span>
+        <span><i className="fas fa-check" /> Configuración en minutos</span>
+        <span><i className="fas fa-check" /> Podés cambiar después</span>
       </div>
       <p className="auth-switch">
         ¿Ya tenés cuenta? <Link to="/login">Iniciá sesión</Link>
@@ -32,43 +39,43 @@ function StepTipo({ onSelect }) {
 // Step 2 for Profesional: choose rubro
 const RUBROS_VISUALES = [
   {
-    icon: '✂️',
+    icon: 'fa-scissors',
     label: 'Peluquería/\nBarbería',
     key: 'peluqueria',
     img: 'https://images.unsplash.com/photo-1503951914875-452162b0f3f1?w=400&q=80',
   },
   {
-    icon: '🐾',
+    icon: 'fa-paw',
     label: 'Veterinaria',
     key: 'veterinaria',
     img: 'https://images.unsplash.com/photo-1587300003388-59208cc962cb?w=400&q=80',
   },
   {
-    icon: '🩺',
+    icon: 'fa-stethoscope',
     label: 'Clínica/\nConsultorio',
     key: 'clinica',
     img: 'https://images.unsplash.com/photo-1576091160550-2173dba999ef?w=400&q=80',
   },
   {
-    icon: '🦷',
+    icon: 'fa-tooth',
     label: 'Odontología',
     key: 'odontologia',
     img: 'https://images.unsplash.com/photo-1606811971618-4486d14f3f99?w=400&q=80',
   },
   {
-    icon: '🏋️',
+    icon: 'fa-dumbbell',
     label: 'Gimnasio/\nFitness',
     key: 'gimnasio',
     img: 'https://images.unsplash.com/photo-1534438327276-14e5300c3a48?w=400&q=80',
   },
   {
-    icon: '🌸',
+    icon: 'fa-spa',
     label: 'Masajes/\nKinesiología',
     key: 'masajes',
     img: 'https://images.unsplash.com/photo-1544161515-4ab6ce6db874?w=400&q=80',
   },
   {
-    icon: '🗂️',
+    icon: 'fa-briefcase',
     label: 'Otro',
     key: 'otro',
     img: 'https://images.unsplash.com/photo-1497366216548-37526070297c?w=400&q=80',
@@ -99,7 +106,7 @@ function RubroCard({ rubro, selected, onClick }) {
         style={{ opacity: hovered || selected ? 1 : 0 }}
       />
       {/* Contenido */}
-      <span className="rubro-card-icon">{rubro.icon}</span>
+      <span className="rubro-card-icon"><i className={`fas ${rubro.icon}`} /></span>
       <small style={{ whiteSpace: 'pre-line' }}>{rubro.label}</small>
       {selected && <span className="rubro-card-check">✓</span>}
     </button>
@@ -365,20 +372,18 @@ export default function Register() {
   }
 
   return (
-    <div className="auth-page">
+    <div className="auth-page register-page">
       <button className="theme-toggle-fixed" onClick={toggleTheme} title="Cambiar tema">
         {theme === 'dark' ? '☀️' : '🌙'}
       </button>
 
       <div className="auth-split">
         <div className="auth-panel-left">
-          <Link to="/" className="auth-brand">
-            <div className="auth-brand-icon">📅</div>
-            <span>SmartAgenda Pro</span>
-          </Link>
+          <Link to="/" className="auth-brand"><img src={logoSmartAgendaDark} alt="SmartAgenda Pro" /></Link>
           <div className="auth-panel-quote">
-            <h2>Unite a miles de profesionales que ya organizan su agenda</h2>
-            <p>Gratis para empezar. Sin tarjeta de crédito.</p>
+            <span className="register-eyebrow">EMPEZÁ EN MINUTOS</span>
+            <h2>Organizá tu agenda con una experiencia pensada para tu trabajo.</h2>
+            <p>Creá tu cuenta, definí tus horarios y empezá a recibir reservas.</p>
           </div>
           <div className="auth-panel-steps">
             <div className={`auth-step${step === 'tipo' ? ' active' : ''}`}>
