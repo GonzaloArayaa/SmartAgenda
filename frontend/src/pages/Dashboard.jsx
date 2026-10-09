@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { reportes, turnos, usuarios } from '../services/api';
 import { normalizeReportStats } from '../utils/reportStats';
+import { fechaLocal } from '../utils/fecha';
 
 export default function Dashboard() {
   const { user } = useAuth();
@@ -23,7 +24,7 @@ function DashboardProfesional({ user }) {
     async function fetchData() {
       setError('');
       try {
-        const hoy = new Date().toISOString().split('T')[0];
+        const hoy = fechaLocal();
         const [statsData, turnosData] = await Promise.all([
           reportes.getEstadisticas(`idProfesional=${user.idProfesional}`),
           turnos.getAll(`idProfesional=${user.idProfesional}`),
@@ -165,7 +166,7 @@ function DashboardCliente({ user }) {
 
   if (loading) return <div className="spinner"></div>;
 
-  const hoy = new Date().toISOString().split('T')[0];
+  const hoy = fechaLocal();
   const proximos = misTurnos.filter(
     (t) => t.fecha >= hoy && !['cancelado', 'finalizado', 'vencido'].includes(String(t.estado).toLowerCase())
   ).sort((a, b) => `${a.fecha}${a.horaInicio}`.localeCompare(`${b.fecha}${b.horaInicio}`));

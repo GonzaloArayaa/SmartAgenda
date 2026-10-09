@@ -2,8 +2,14 @@ import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { turnos } from '../services/api';
+import { fechaLocal, horaCorta } from '../utils/fecha';
 
 const DIAS_SEMANA = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
+
+// Posición del día dentro de la semana de la agenda (0 = lunes ... 6 = domingo)
+function indiceEnSemana(date) {
+  return (date.getDay() + 6) % 7;
+}
 
 function getWeekDates(baseDate) {
   const d = new Date(baseDate);
@@ -20,10 +26,6 @@ function getWeekDates(baseDate) {
   return fechas;
 }
 
-function formatDate(date) {
-  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
-}
-
 function formatDateShort(date) {
   return `${date.getDate()}/${date.getMonth() + 1}`;
 }
@@ -34,14 +36,16 @@ export default function Agenda() {
   const [turnosList, setTurnosList] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedTurno, setSelectedTurno] = useState(null);
+  // Día que se muestra en celulares (en pantallas grandes se ve la semana completa)
+  const [diaSeleccionado, setDiaSeleccionado] = useState(() => indiceEnSemana(new Date()));
 
   const weekDates = getWeekDates(baseDate);
 
   async function fetchTurnos() {
     setLoading(true);
     try {
-      const desde = formatDate(weekDates[0]);
-      const hasta = formatDate(weekDates[6]);
+      const desde = fechaLocal(weekDates[0]);
+      const hasta = fechaLocal(weekDates[6]);
       const data = await turnos.getAll(
         `idProfesional=${user.idProfesional}&fechaDesde=${desde}&fechaHasta=${hasta}`
       );
@@ -58,7 +62,7 @@ export default function Agenda() {
     let active = true;
     const dates = getWeekDates(baseDate);
     const params = new URLSearchParams({ idProfesional: user.idProfesional,
-      fechaDesde: formatDate(dates[0]), fechaHasta: formatDate(dates[6]) });
+      fechaDesde: fechaLocal(dates[0]), fechaHasta: fechaLocal(dates[6]) });
     turnos.getAll(params.toString())
       .then((data) => { if (active) setTurnosList(Array.isArray(data) ? data : []); })
       .catch(() => { if (active) setTurnosList([]); })
@@ -80,6 +84,17 @@ export default function Agenda() {
 
   function goToday() {
     setBaseDate(new Date());
+    setDiaSeleccionado(indiceEnSemana(new Date()));
+  }
+
+  // Selector de día (celular): flechas para moverse, Inicio/Fin para ir al lunes/domingo
+  function handleDiaKeyDown(e) {
+    const destinos = { ArrowRight: diaSeleccionado + 1, ArrowLeft: diaSeleccionado - 1, Home: 0, End: 6 };
+    if (!(e.key in destinos)) return;
+    e.preventDefault();
+    const nuevo = Math.min(6, Math.max(0, destinos[e.key]));
+    setDiaSeleccionado(nuevo);
+    document.getElementById(`agenda-dia-${nuevo}`)?.focus();
   }
 
   function getTurnosByDate(fecha) {
@@ -103,7 +118,7 @@ export default function Agenda() {
     }
   }
 
-  const hoy = formatDate(new Date());
+  const hoy = fechaLocal(new Date());
   const totalSemana = turnosList.length;
   const confirmados = turnosList.filter((t) => String(t.estado).toLowerCase() === 'confirmado').length;
 
@@ -132,18 +147,43 @@ export default function Agenda() {
         </div>
       </section>
 
+      <div className="agenda-day-picker" role="tablist" aria-label="Día de la semana">
+        {weekDates.map((date, i) => {
+          const fechaStr = fechaLocal(date);
+          const cantidad = getTurnosByDate(fechaStr).length;
+          const seleccionado = i === diaSeleccionado;
+          return (
+            <button
+              key={fechaStr}
+              id={`agenda-dia-${i}`}
+              type="button"
+              role="tab"
+              aria-selected={seleccionado}
+              tabIndex={seleccionado ? 0 : -1}
+              className={`${seleccionado ? 'is-selected' : ''} ${fechaStr === hoy ? 'is-today' : ''}`}
+              onClick={() => setDiaSeleccionado(i)}
+              onKeyDown={handleDiaKeyDown}
+            >
+              <span>{DIAS_SEMANA[date.getDay()]}</span>
+              <strong>{date.getDate()}</strong>
+              <small>{cantidad > 0 ? cantidad : '·'}</small>
+            </button>
+          );
+        })}
+      </div>
+
       {loading ? (
         <div className="spinner"></div>
       ) : (
         <section className="modern-week-grid">
           {weekDates.map((date, i) => {
-            const fechaStr = formatDate(date);
+            const fechaStr = fechaLocal(date);
             const esHoy = fechaStr === hoy;
             const turnosDelDia = getTurnosByDate(fechaStr);
             const dayIndex = date.getDay();
 
             return (
-              <article key={i} className={`modern-day-column ${esHoy ? 'is-today' : ''}`}>
+              <article key={i} className={`modern-day-column ${esHoy ? 'is-today' : ''} ${i === diaSeleccionado ? 'is-selected' : ''}`}>
                 <header><span>{DIAS_SEMANA[dayIndex]}</span><strong>{date.getDate()}</strong>{esHoy && <small>HOY</small>}</header>
                 <div className="modern-day-events">
                 {turnosDelDia.length === 0 ? (
@@ -151,7 +191,7 @@ export default function Agenda() {
                 ) : (
                   turnosDelDia.map((t) => (
                     <button key={t.idTurno} className={`modern-calendar-event ${(t.estado || '').toLowerCase()}`} onClick={() => setSelectedTurno(t)}>
-                      <time>{String(t.horaInicio).slice(0, 5)}</time>
+                      <time>{horaCorta(t.horaInicio)}</time>
                       <strong>{t.cliente_nombre ? `${t.cliente_nombre} ${t.cliente_apellido || ''}` : t.nombreCliente || t.cliente || 'Cliente'}</strong>
                       <span>{t.servicio_nombre || t.nombreServicio || t.servicio || 'Servicio'}</span>
                     </button>
@@ -168,7 +208,7 @@ export default function Agenda() {
         <div className="modal-overlay module-modal-overlay" onClick={() => setSelectedTurno(null)}>
           <div className="modal module-modal appointment-modal" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
-              <div><span>DETALLE DE ATENCIÓN</span><h3>{String(selectedTurno.horaInicio).slice(0, 5)} · {selectedTurno.fecha}</h3></div>
+              <div><span>DETALLE DE ATENCIÓN</span><h3>{horaCorta(selectedTurno.horaInicio)} · {selectedTurno.fecha}</h3></div>
               <button className="modal-close" onClick={() => setSelectedTurno(null)}>
                 <i className="fas fa-times"></i>
               </button>
@@ -190,7 +230,7 @@ export default function Agenda() {
                 </div>
                 <div className="form-group">
                   <label className="form-label">Hora</label>
-                  <p>{selectedTurno.horaInicio}</p>
+                  <p>{horaCorta(selectedTurno.horaInicio)}</p>
                 </div>
               </div>
               <div className="form-group">

@@ -1,10 +1,7 @@
 import { useEffect, useState } from 'react';
 import { recomendaciones } from '../services/api';
+import { fechaLocal } from '../utils/fecha';
 
-function todayLocal() {
-  const date = new Date();
-  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
-}
 
 export default function AppointmentSlotPicker({ professionalId, serviceId, excludedAppointmentId,
   date, onDateChange, time, onTimeChange }) {
@@ -41,7 +38,7 @@ export default function AppointmentSlotPicker({ professionalId, serviceId, exclu
   return (
     <div className="slot-picker">
       <label className="form-label" htmlFor="appointment-date">Elegí una fecha</label>
-      <input id="appointment-date" type="date" className="form-input" min={todayLocal()}
+      <input id="appointment-date" type="date" className="form-input" min={fechaLocal()}
         value={date} onChange={(event) => changeDate(event.target.value)} />
       {date && <div className="slot-picker-results" aria-live="polite">
         <span className="slot-picker-label">HORARIOS DISPONIBLES</span>

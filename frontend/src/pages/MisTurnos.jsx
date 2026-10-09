@@ -2,16 +2,13 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { turnos } from '../services/api';
 import AppointmentSlotPicker from '../components/AppointmentSlotPicker';
+import { fechaLocal } from '../utils/fecha';
 
 const filters = [
   ['todos', 'Todos'], ['pendiente', 'Pendientes'], ['confirmado', 'Confirmados'],
   ['cancelado', 'Cancelados'], ['finalizado', 'Finalizados'], ['vencido', 'Vencidos'],
 ];
 
-function todayLocal() {
-  const date = new Date();
-  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
-}
 
 export default function MisTurnos() {
   const [appointments, setAppointments] = useState([]);
@@ -58,7 +55,7 @@ export default function MisTurnos() {
 
   function openRescheduling(appointment) {
     setRescheduling(appointment);
-    setDate(appointment.fecha < todayLocal() ? '' : appointment.fecha);
+    setDate(appointment.fecha < fechaLocal() ? '' : appointment.fecha);
     setTime('');
     setError('');
   }
@@ -82,7 +79,7 @@ export default function MisTurnos() {
 
   const shown = filter === 'todos' ? appointments
     : appointments.filter((appointment) => String(appointment.estado).toLowerCase() === filter);
-  const today = todayLocal();
+  const today = fechaLocal();
   const upcoming = appointments.filter((appointment) => appointment.fecha >= today
     && ['pendiente', 'confirmado'].includes(String(appointment.estado).toLowerCase())).length;
 
