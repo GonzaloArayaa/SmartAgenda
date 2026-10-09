@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { reportes, turnos, usuarios } from '../services/api';
+import { normalizeReportStats } from '../utils/reportStats';
 
 export default function Dashboard() {
   const { user } = useAuth();
@@ -16,21 +17,25 @@ function DashboardProfesional({ user }) {
   const [stats, setStats] = useState(null);
   const [turnosHoy, setTurnosHoy] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
 
   useEffect(() => {
     async function fetchData() {
+      setError('');
       try {
         const hoy = new Date().toISOString().split('T')[0];
         const [statsData, turnosData] = await Promise.all([
           reportes.getEstadisticas(`idProfesional=${user.idProfesional}`),
           turnos.getAll(`idProfesional=${user.idProfesional}`),
         ]);
-        setStats(statsData);
+        setStats(normalizeReportStats(statsData));
         const listaTurnos = Array.isArray(turnosData) ? turnosData : turnosData.turnos || [];
-        setTurnosHoy(listaTurnos.filter((t) => t.fecha === hoy));
-      } catch {
+        setTurnosHoy(listaTurnos.filter((t) => t.fecha === hoy
+          && ['pendiente', 'confirmado'].includes(String(t.estado).toLowerCase())));
+      } catch (requestError) {
         setStats(null);
         setTurnosHoy([]);
+        setError(requestError.message || 'No pudimos cargar el resumen del día.');
       } finally {
         setLoading(false);
       }
@@ -41,12 +46,13 @@ function DashboardProfesional({ user }) {
   if (loading) return <div className="spinner"></div>;
 
   const tasaOcupacion = stats?.tasaOcupacion ?? 0;
-  const ingresosMes = stats?.ingresos ?? stats?.ingresosMes ?? 0;
-  const cancelaciones = stats?.totalCancelaciones ?? stats?.cancelaciones ?? 0;
+  const ingresosMes = stats?.ingresos ?? 0;
+  const cancelaciones = stats?.totalCancelaciones ?? 0;
   const fechaHoy = new Date().toLocaleDateString('es-AR', { weekday: 'long', day: 'numeric', month: 'long' });
 
   return (
     <div className="professional-dashboard">
+      {error && <div className="report-feedback report-feedback-error" role="alert"><i className="fas fa-exclamation-circle" /><div><strong>No se pudo actualizar el dashboard</strong><span>{error}</span></div></div>}
       <section className="pro-dashboard-hero">
         <div>
           <span className="pro-kicker">PANEL PROFESIONAL</span>
@@ -161,7 +167,7 @@ function DashboardCliente({ user }) {
 
   const hoy = new Date().toISOString().split('T')[0];
   const proximos = misTurnos.filter(
-    (t) => t.fecha >= hoy && !['cancelado', 'finalizado'].includes(String(t.estado).toLowerCase())
+    (t) => t.fecha >= hoy && !['cancelado', 'finalizado', 'vencido'].includes(String(t.estado).toLowerCase())
   ).sort((a, b) => `${a.fecha}${a.horaInicio}`.localeCompare(`${b.fecha}${b.horaInicio}`));
   const finalizados = misTurnos.filter((t) => String(t.estado).toLowerCase() === 'finalizado').length;
   const proximo = proximos[0];
@@ -209,23 +215,28 @@ function DashboardAdmin({ user }) {
   const [stats, setStats] = useState(null);
   const [totalUsuarios, setTotalUsuarios] = useState(0);
   const [totalProfesionales, setTotalProfesionales] = useState(0);
+  const [totalActivos, setTotalActivos] = useState(0);
   const [usuariosRecientes, setUsuariosRecientes] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
 
   useEffect(() => {
     async function fetchData() {
+      setError('');
       try {
         const [statsData, usersData] = await Promise.all([
           reportes.getEstadisticas(),
           usuarios.getAll(),
         ]);
-        setStats(statsData);
+        setStats(normalizeReportStats(statsData));
         const listaUsers = Array.isArray(usersData) ? usersData : usersData.usuarios || [];
         setTotalUsuarios(listaUsers.length);
         setTotalProfesionales(listaUsers.filter((u) => u.rol === 'Profesional').length);
+        setTotalActivos(listaUsers.filter((u) => String(u.estado).toLowerCase() === 'activo').length);
         setUsuariosRecientes(listaUsers.slice(0, 5));
-      } catch {
+      } catch (requestError) {
         setStats(null);
+        setError(requestError.message || 'No pudimos cargar las métricas administrativas.');
       } finally {
         setLoading(false);
       }
@@ -236,11 +247,12 @@ function DashboardAdmin({ user }) {
   if (loading) return <div className="spinner"></div>;
 
   const totalTurnos = stats?.totalTurnos ?? 0;
-  const cancelaciones = stats?.totalCancelaciones ?? stats?.cancelaciones ?? 0;
-  const activos = usuariosRecientes.filter((u) => String(u.estado).toLowerCase() === 'activo').length;
+  const turnosHoy = stats?.turnosHoy ?? 0;
+  const cancelaciones = stats?.totalCancelaciones ?? 0;
 
   return (
     <div className="admin-dashboard">
+      {error && <div className="report-feedback report-feedback-error" role="alert"><i className="fas fa-exclamation-circle" /><div><strong>No se pudo actualizar el dashboard</strong><span>{error}</span></div></div>}
       <section className="admin-dashboard-hero">
         <div>
           <span className="admin-kicker">CENTRO DE CONTROL</span>
@@ -254,13 +266,13 @@ function DashboardAdmin({ user }) {
       <section className="admin-metrics-grid">
         <article><div><span>USUARIOS</span><strong>{totalUsuarios}</strong><small>Cuentas registradas</small></div><i className="fas fa-users" /></article>
         <article><div><span>PROFESIONALES</span><strong>{totalProfesionales}</strong><small>Prestadores activos</small></div><i className="fas fa-user-tie" /></article>
-        <article><div><span>TURNOS</span><strong>{totalTurnos}</strong><small>Actividad del período</small></div><i className="far fa-calendar-check" /></article>
+        <article><div><span>TURNOS HOY</span><strong>{turnosHoy}</strong><small>{totalTurnos} en el período actual</small></div><i className="far fa-calendar-check" /></article>
         <article><div><span>CANCELACIONES</span><strong>{cancelaciones}</strong><small>Requieren seguimiento</small></div><i className="fas fa-times" /></article>
       </section>
 
       <section className="admin-overview-grid">
         <article className="admin-recent-users"><header><div><span>ALTAS RECIENTES</span><h3>Últimos usuarios</h3></div><Link to="/usuarios">Ver gestión completa</Link></header><div>{usuariosRecientes.map((u)=><div key={u.idUsuario} className="admin-user-row"><div className="admin-user-avatar">{`${u.nombre?.[0]||''}${u.apellido?.[0]||''}`.toUpperCase()}</div><div><strong>{u.nombre} {u.apellido}</strong><span>{u.email}</span></div><b>{u.rol}</b><small className={String(u.estado).toLowerCase()}><i className="fas fa-circle" /> {u.estado}</small></div>)}</div></article>
-        <aside className="admin-system-card"><span>CONTROL DE ACCESO</span><strong>{activos}/{usuariosRecientes.length}</strong><p>cuentas recientes activas</p><div><i className="fas fa-lock" /> Las sesiones y permisos se validan desde el servidor.</div><Link to="/usuarios">Revisar cuentas</Link></aside>
+        <aside className="admin-system-card"><span>CONTROL DE ACCESO</span><strong>{totalActivos}/{totalUsuarios}</strong><p>cuentas activas en el sistema</p><div><i className="fas fa-lock" /> Las sesiones y permisos se validan desde el servidor.</div><Link to="/usuarios">Revisar cuentas</Link></aside>
       </section>
     </div>
   );

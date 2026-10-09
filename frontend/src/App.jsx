@@ -10,6 +10,8 @@ import Dashboard from './pages/Dashboard';
 import Servicios from './pages/Servicios';
 import Disponibilidad from './pages/Disponibilidad';
 import Agenda from './pages/Agenda';
+import NuevoTurno from './pages/NuevoTurno';
+import HistorialTurnos from './pages/HistorialTurnos';
 import Buscar from './pages/Buscar';
 import Reservar from './pages/Reservar';
 import MisTurnos from './pages/MisTurnos';
@@ -57,6 +59,12 @@ function AppRoutes() {
       } />
       <Route path="/agenda" element={
         <ProtectedRoute roles={['Profesional']}><AppLayout><Agenda /></AppLayout></ProtectedRoute>
+      } />
+      <Route path="/nuevo-turno" element={
+        <ProtectedRoute roles={['Profesional']}><AppLayout><NuevoTurno /></AppLayout></ProtectedRoute>
+      } />
+      <Route path="/historial-turnos" element={
+        <ProtectedRoute roles={['Profesional']}><AppLayout><HistorialTurnos /></AppLayout></ProtectedRoute>
       } />
       <Route path="/buscar" element={
         <ProtectedRoute roles={['Cliente']}><AppLayout><Buscar /></AppLayout></ProtectedRoute>

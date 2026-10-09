@@ -8,24 +8,18 @@ export function AuthProvider({ children }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    checkAuth();
+    let active = true;
+    auth.check()
+      .then((data) => { if (active) setUser(data.authenticated ? data.user : null); })
+      .catch(() => { if (active) setUser(null); })
+      .finally(() => { if (active) setLoading(false); });
     const cerrarSesionVencida = () => setUser(null);
     window.addEventListener('smartagenda:sesion-vencida', cerrarSesionVencida);
-    return () => window.removeEventListener('smartagenda:sesion-vencida', cerrarSesionVencida);
+    return () => {
+      active = false;
+      window.removeEventListener('smartagenda:sesion-vencida', cerrarSesionVencida);
+    };
   }, []);
-
-  async function checkAuth() {
-    try {
-      const data = await auth.check();
-      if (data.authenticated) {
-        setUser(data.user);
-      }
-    } catch {
-      setUser(null);
-    } finally {
-      setLoading(false);
-    }
-  }
 
   async function login(email, contrasena) {
     const data = await auth.login(email, contrasena);
@@ -38,18 +32,23 @@ export function AuthProvider({ children }) {
     return data;
   }
 
+  function updateUser(updatedUser) {
+    setUser(updatedUser);
+  }
+
   async function logout() {
     await auth.logout();
     setUser(null);
   }
 
   return (
-    <AuthContext.Provider value={{ user, login, register, logout, loading }}>
+    <AuthContext.Provider value={{ user, login, register, logout, updateUser, loading }}>
       {children}
     </AuthContext.Provider>
   );
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function useAuth() {
   const ctx = useContext(AuthContext);
   if (!ctx) throw new Error('useAuth debe usarse dentro de AuthProvider');

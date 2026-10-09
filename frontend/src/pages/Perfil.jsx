@@ -1,8 +1,9 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { perfil, reportes } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 
 export default function Perfil() {
-  const { user } = useAuth();
+  const { user, updateUser } = useAuth();
 
   const [form, setForm] = useState({
     nombre: user?.nombre || '',
@@ -11,10 +12,33 @@ export default function Perfil() {
     telefono: user?.telefono || '',
     nombreNegocio: user?.nombreNegocio || '',
     rubro: user?.nombreRubro || user?.rubro || '',
+    idRubro: user?.idRubro || '',
     descripcion: user?.descripcion || '',
   });
   const [saving, setSaving] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [toast, setToast] = useState('');
+  const [error, setError] = useState('');
+  const [rubros, setRubros] = useState([]);
+
+  useEffect(() => {
+    let active = true;
+    Promise.all([perfil.get(), reportes.getRubros()])
+      .then(([data, availableRubros]) => {
+        setRubros(availableRubros);
+        if (!active) return;
+        setForm({
+          nombre: data.nombre || '', apellido: data.apellido || '',
+          email: data.email || '', telefono: data.telefono || '',
+          nombreNegocio: data.nombreNegocio || '',
+          rubro: data.nombreRubro || '', idRubro: data.idRubro || '',
+          descripcion: data.descripcion || '',
+        });
+      })
+      .catch((err) => { if (active) setError(err.message || 'No pudimos cargar el perfil.'); })
+      .finally(() => { if (active) setLoading(false); });
+    return () => { active = false; };
+  }, []);
 
   function handleChange(e) {
     const { name, value } = e.target;
@@ -24,11 +48,20 @@ export default function Perfil() {
   async function handleSubmit(e) {
     e.preventDefault();
     setSaving(true);
-    setTimeout(() => {
+    setError('');
+    setToast('');
+    try {
+      const result = await perfil.update({
+        nombre: form.nombre, apellido: form.apellido, telefono: form.telefono,
+        ...(user?.rol === 'Profesional' ? { nombreNegocio: form.nombreNegocio, descripcion: form.descripcion, idRubro: form.idRubro } : {}),
+      });
+      updateUser(result.user);
+      setToast(result.message || 'Perfil actualizado correctamente.');
+    } catch (err) {
+      setError(err.message || 'No pudimos guardar el perfil.');
+    } finally {
       setSaving(false);
-      setToast('Perfil actualizado correctamente.');
-      setTimeout(() => setToast(''), 3000);
-    }, 800);
+    }
   }
 
   function getInitials() {
@@ -49,6 +82,8 @@ export default function Perfil() {
         <div className="profile-completion"><span>Perfil completo</span><strong>{completitud}%</strong><div><i style={{ width:`${completitud}%` }} /></div></div>
       </section>
 
+      {loading && <div className="module-inline-message">Cargando tus datos...</div>}
+      {error && <div className="auth-error" role="alert">{error}</div>}
       {toast && (
         <div className="toast-container">
           <div className="toast toast-success">
@@ -134,13 +169,10 @@ export default function Perfil() {
 
                 <div className="form-group">
                   <label className="form-label">Rubro</label>
-                  <input
-                    type="text"
-                    name="rubro"
-                    value={form.rubro}
-                    readOnly
-                    className="form-input profile-readonly"
-                  />
+                  <select name="idRubro" value={form.idRubro} onChange={handleChange} className="form-input" required>
+                    <option value="">Seleccioná un rubro</option>
+                    {rubros.map((item) => <option key={item.idRubro} value={item.idRubro}>{item.nombre}</option>)}
+                  </select>
                 </div>
 
                 <div className="form-group">
@@ -156,7 +188,7 @@ export default function Perfil() {
               </>
             )}
 
-            <div className="profile-form-actions"><span>Los cambios se aplicarán a tu perfil.</span><button type="submit" className="module-primary-btn" disabled={saving}>
+            <div className="profile-form-actions"><span>Los cambios se aplicarán a tu perfil.</span><button type="submit" className="module-primary-btn" disabled={saving || loading}>
               {saving ? (
                 <><i className="fas fa-spinner fa-spin"></i> Guardando...</>
               ) : (

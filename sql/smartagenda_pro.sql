@@ -35,7 +35,8 @@ CREATE TABLE IF NOT EXISTS usuario (
 -- ============================================================
 CREATE TABLE IF NOT EXISTS rubro (
     idRubro INT AUTO_INCREMENT PRIMARY KEY,
-    nombre VARCHAR(50) NOT NULL UNIQUE
+    nombre VARCHAR(50) NOT NULL UNIQUE,
+    estado VARCHAR(20) NOT NULL DEFAULT 'activo'
 ) ENGINE=InnoDB;
 
 -- ============================================================

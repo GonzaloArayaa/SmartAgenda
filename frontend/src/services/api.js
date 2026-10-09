@@ -1,4 +1,4 @@
-const API_URL = 'http://localhost:8080/api';
+const API_URL = '/api';
 
 async function request(endpoint, options = {}) {
   const config = {
@@ -25,6 +25,11 @@ export const auth = {
   check: () => request('auth/check'),
 };
 
+export const perfil = {
+  get: () => request('perfil'),
+  update: (data) => request('perfil', { method: 'PUT', body: data }),
+};
+
 export const profesionales = {
   getAll: (params = '') => request(`profesionales?${params}`),
   getOne: (id) => request(`profesionales?id=${id}`),
@@ -43,13 +48,19 @@ export const disponibilidad = {
 
 export const turnos = {
   getAll: (params = '') => request(`turnos?${params}`),
+  getClients: (search = '', includeInactive = false) =>
+    request(`turnos/clientes?buscar=${encodeURIComponent(search)}&incluirInactivos=${includeInactive}`),
+  getHistoryServices: () => request('turnos/servicios'),
   create: (data) => request('turnos', { method: 'POST', body: data }),
   update: (data) => request('turnos', { method: 'PUT', body: data }),
 };
 
 export const recomendaciones = {
-  get: (idProfesional, idServicio, fecha) =>
-    request(`recomendaciones?idProfesional=${idProfesional}&idServicio=${idServicio}&fecha=${fecha}`),
+  get: (idProfesional, idServicio, fecha, excluirIdTurno) => {
+    const params = new URLSearchParams({ idProfesional, idServicio, fecha });
+    if (excluirIdTurno) params.set('excluirIdTurno', excluirIdTurno);
+    return request(`recomendaciones?${params}`);
+  },
 };
 
 export const reportes = {
