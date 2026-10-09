@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { servicios, profesionales, recomendaciones, turnos, listaEspera } from '../services/api';
+import { fechaLocal, fechaLocalEnDias } from '../utils/fecha';
 
 export default function Reservar() {
   const { idProfesional } = useParams();
@@ -82,12 +83,7 @@ export default function Reservar() {
   }
 
   function seleccionarFechaRapida(dias) {
-    const date = new Date();
-    date.setDate(date.getDate() + dias);
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const day = String(date.getDate()).padStart(2, '0');
-    setFecha(`${year}-${month}-${day}`);
+    setFecha(fechaLocalEnDias(dias));
     setError('');
   }
 
@@ -156,7 +152,7 @@ export default function Reservar() {
     );
   }
 
-  const hoy = new Date().toISOString().split('T')[0];
+  const hoy = fechaLocal();
   const slotsRecomendados = slots
     .filter((slot) => slot.recomendado)
     .sort((a, b) => (a.posicionRanking || 99) - (b.posicionRanking || 99));

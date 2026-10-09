@@ -2272,3 +2272,33 @@ input, select, textarea { font-family: inherit; }
 [data-theme="dark"] .appointment-inline-actions button{background:#111a2b;border-color:#334159}
 @media(max-width:1100px){.appointment-filter-card{grid-template-columns:repeat(3,minmax(150px,1fr))}}
 @media(max-width:640px){.appointment-filter-card{grid-template-columns:1fr 1fr}.appointment-filter-actions{grid-column:1/-1}.appointment-history-list article{grid-template-columns:1fr auto;gap:7px}.appointment-history-date{grid-column:1/-1}.agenda-primary-actions{flex-wrap:wrap}.appointment-inline-actions{justify-content:flex-start}}
+
+/* ============================================================
+   Agenda en celulares: selector de día + un día por vez
+   ============================================================ */
+.agenda-day-picker{display:none}
+[data-theme="dark"] .modern-day-column>header{background:#182238}
+[data-theme="dark"] .modern-day-column>header span{color:#8f9bb3}
+@media(max-width:720px){
+  .agenda-toolbar{flex-wrap:wrap;gap:12px}
+  .agenda-day-picker{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px;margin:0 0 12px}
+  .agenda-day-picker button{display:flex;min-width:0;min-height:62px;flex-direction:column;align-items:center;justify-content:center;gap:2px;padding:6px 0;border:1px solid #e4dbd2;border-radius:10px;background:#fffdfa;color:#253149;font:inherit;cursor:pointer;touch-action:manipulation}
+  .agenda-day-picker button span{color:#8a93a2;font-size:.6rem;font-weight:800;text-transform:uppercase}
+  .agenda-day-picker button strong{font-size:1rem;line-height:1}
+  .agenda-day-picker button small{min-height:14px;color:#d65c40;font-size:.62rem;font-weight:800}
+  .agenda-day-picker button.is-today{border-color:#e96c4d}
+  .agenda-day-picker button.is-selected{border-color:#e96c4d;background:#e96c4d;color:#fff}
+  .agenda-day-picker button.is-selected span,.agenda-day-picker button.is-selected small{color:#fff}
+  .agenda-day-picker button:focus-visible{outline:2px solid #e96c4d;outline-offset:2px}
+  .modern-week-grid{grid-template-columns:1fr;overflow:visible}
+  .modern-day-column{min-width:0;min-height:0;border-right:0}
+  .modern-day-column:not(.is-selected){display:none}
+  .modern-day-column>header{height:auto;flex-direction:row;gap:8px;justify-content:flex-start;padding:12px 14px}
+  .modern-day-column>header small{position:static}
+  .modern-day-events{padding:12px}
+  .modern-calendar-event{padding:12px;min-height:44px}
+  .modern-calendar-event strong{font-size:.8rem}
+  .modern-calendar-event span{font-size:.7rem}
+  [data-theme="dark"] .agenda-day-picker button{border-color:#334159;background:#111a2b;color:#dce2ee}
+  [data-theme="dark"] .agenda-day-picker button.is-selected{border-color:#e96c4d;background:#e96c4d;color:#fff}
+}
