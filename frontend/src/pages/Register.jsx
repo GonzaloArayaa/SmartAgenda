@@ -113,8 +113,20 @@ function RubroCard({ rubro, selected, onClick }) {
   );
 }
 
-function StepRubro({ onSelect, onBack }) {
+function StepRubro({ rubrosApi, onSelect, onBack }) {
   const [selected, setSelected] = useState(null);
+  const options = rubrosApi.map((item) => {
+    const nombre = item.nombre.toLowerCase();
+    const visual = RUBROS_VISUALES.find((entry) =>
+      (nombre.includes('peluquer') && entry.key === 'peluqueria') ||
+      (nombre.includes('medic') && entry.key === 'clinica') ||
+      (nombre.includes('fitness') && entry.key === 'gimnasio') ||
+      (nombre.includes('veterin') && entry.key === 'veterinaria') ||
+      (nombre.includes('odont') && entry.key === 'odontologia') ||
+      (nombre.includes('masaj') && entry.key === 'masajes')
+    ) || RUBROS_VISUALES.find((entry) => entry.key === 'otro');
+    return { ...visual, ...item, label: item.nombre };
+  });
   return (
     <div className="auth-form-container">
       <button className="auth-back-btn" onClick={onBack}>
@@ -123,19 +135,20 @@ function StepRubro({ onSelect, onBack }) {
       <h1 className="auth-title">¿Qué tipo de negocio gestionás?</h1>
       <p className="auth-subtitle">Seleccioná una opción (podés cambiarla después)</p>
       <div className="register-rubro-grid">
-        {RUBROS_VISUALES.map((r) => (
+        {options.map((r) => (
           <RubroCard
-            key={r.key}
+            key={r.idRubro}
             rubro={r}
-            selected={selected === r.key}
-            onClick={() => setSelected(r.key)}
+            selected={selected === r.idRubro}
+            onClick={() => setSelected(r.idRubro)}
           />
         ))}
       </div>
+      {options.length === 0 && <p className="auth-error">No pudimos cargar los rubros. Recargá la página e intentá de nuevo.</p>}
       <button
         className="auth-btn-primary"
         disabled={!selected}
-        onClick={() => onSelect(selected)}
+        onClick={() => onSelect(options.find((item) => item.idRubro === selected))}
         style={{ marginTop: '20px' }}
       >
         Continuar
@@ -149,7 +162,7 @@ function StepForm({ rol, rubro, rubrosApi, error, loading, onSubmit, onBack }) {
   const [form, setForm] = useState({
     nombre: '', apellido: '', email: '', telefono: '',
     contrasena: '', confirmarContrasena: '',
-    nombreNegocio: '', idRubro: '', descripcion: '',
+    nombreNegocio: '', idRubro: rubro?.idRubro || '', descripcion: '',
   });
   const [showPass, setShowPass] = useState(false);
 
@@ -170,7 +183,7 @@ function StepForm({ rol, rubro, rubrosApi, error, loading, onSubmit, onBack }) {
       </button>
       <h1 className="auth-title">Completá tus datos</h1>
       <p className="auth-subtitle">
-        {rol === 'Profesional' ? `Cuenta Profesional · ${rubro}` : 'Cuenta Cliente'}
+        {rol === 'Profesional' ? `Cuenta Profesional · ${rubro?.nombre || ''}` : 'Cuenta Cliente'}
       </p>
 
       {error && (
@@ -255,12 +268,11 @@ function StepForm({ rol, rubro, rubrosApi, error, loading, onSubmit, onBack }) {
               </div>
             </div>
 
-            {rubrosApi.length > 0 && (
-              <div className="auth-field">
-                <label>Rubro (detallado)</label>
+            <div className="auth-field">
+                <label>Rubro *</label>
                 <div className="auth-input-wrap">
                   <i className="fas fa-briefcase auth-input-icon"></i>
-                  <select name="idRubro" value={form.idRubro} onChange={handleChange} style={{ paddingLeft: '44px' }}>
+                  <select name="idRubro" value={form.idRubro} onChange={handleChange} required style={{ paddingLeft: '44px' }}>
                     <option value="">Seleccionar...</option>
                     {rubrosApi.map(r => (
                       <option key={r.idRubro} value={r.idRubro}>{r.nombre}</option>
@@ -268,7 +280,7 @@ function StepForm({ rol, rubro, rubrosApi, error, loading, onSubmit, onBack }) {
                   </select>
                 </div>
               </div>
-            )}
+            {rubrosApi.length === 0 && <p className="auth-error">No pudimos cargar los rubros. Recargá la página e intentá de nuevo.</p>}
 
             <div className="auth-field">
               <label>Descripción</label>
@@ -349,6 +361,9 @@ export default function Register() {
     if (rol === 'Profesional' && !form.nombreNegocio.trim()) {
       setError('El nombre del negocio es obligatorio para profesionales.'); return;
     }
+    if (rol === 'Profesional' && !form.idRubro) {
+      setError('Seleccioná un rubro válido para continuar.'); return;
+    }
 
     setLoading(true);
     try {
@@ -403,7 +418,7 @@ export default function Register() {
         <div className="auth-panel-right">
           {step === 'tipo' && <StepTipo onSelect={handleTipoSelect} />}
           {step === 'rubro' && (
-            <StepRubro onSelect={handleRubroSelect} onBack={() => setStep('tipo')} />
+            <StepRubro rubrosApi={rubrosApi} onSelect={handleRubroSelect} onBack={() => setStep('tipo')} />
           )}
           {step === 'form' && (
             <StepForm

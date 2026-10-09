@@ -7,6 +7,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.transaction.annotation.Transactional;
 
 @RestController
 @RequestMapping("/api/auth")
@@ -28,15 +29,27 @@ public class AuthController {
     return Map.of("message","Inicio de sesión exitoso","user",dbUser);
   }
 
+  @Transactional
   @PostMapping("/register") public Map<String,Object> register(@RequestBody Map<String,Object> body) {
     String nombre=text(body,"nombre"), apellido=text(body,"apellido"), email=text(body,"email"), pass=text(body,"contrasena"), telefono=text(body,"telefono"), rol=textOr(body,"rol","Cliente");
     if(nombre.isBlank()||apellido.isBlank()||email.isBlank()||pass.isBlank()) throw new ApiException(HttpStatus.BAD_REQUEST,"Todos los campos obligatorios deben completarse");
     if(pass.length()<6) throw new ApiException(HttpStatus.BAD_REQUEST,"La contraseña debe tener al menos 6 caracteres");
+    if(!"Cliente".equals(rol) && !"Profesional".equals(rol)) throw new ApiException(HttpStatus.BAD_REQUEST,"Rol no válido");
+    String negocio = "";
+    Integer rubro = null;
+    if("Profesional".equals(rol)) {
+      negocio = text(body,"nombreNegocio");
+      if(negocio.isBlank()) throw new ApiException(HttpStatus.BAD_REQUEST,"El nombre del negocio es obligatorio");
+      try { rubro = number(body,"idRubro",0); }
+      catch(NumberFormatException e) { throw new ApiException(HttpStatus.BAD_REQUEST,"Rubro no válido"); }
+      if(rubro <= 0 || jdbc.queryForObject("SELECT COUNT(*) FROM rubro WHERE idRubro=? AND estado='activo'",Integer.class,rubro)==0)
+        throw new ApiException(HttpStatus.BAD_REQUEST,"Seleccioná un rubro activo");
+    }
     if(jdbc.queryForObject("SELECT COUNT(*) FROM usuario WHERE email=?",Integer.class,email)>0) throw new ApiException(HttpStatus.CONFLICT,"El email ya está registrado");
     Integer rolId; try { rolId=jdbc.queryForObject("SELECT idRol FROM rol WHERE nombreRol=?",Integer.class,rol); } catch(org.springframework.dao.EmptyResultDataAccessException e) { throw new ApiException(HttpStatus.BAD_REQUEST,"Rol no válido"); }
     jdbc.update("INSERT INTO usuario(nombre,apellido,email,contrasena,telefono,idRol) VALUES(?,?,?,?,?,?)",nombre,apellido,email,passwords.encode(pass),telefono,rolId);
     Integer id=jdbc.queryForObject("SELECT idUsuario FROM usuario WHERE email=?",Integer.class,email);
-    if("Profesional".equals(rol)) { String negocio=textOr(body,"nombreNegocio",nombre+" - Profesional"); String descripcion=text(body,"descripcion"); int rubro=number(body,"idRubro",1); jdbc.update("INSERT INTO profesional(nombreNegocio,descripcion,idRubro,idUsuario) VALUES(?,?,?,?)",negocio,descripcion,rubro,id); }
+    if("Profesional".equals(rol)) jdbc.update("INSERT INTO profesional(nombreNegocio,descripcion,idRubro,idUsuario) VALUES(?,?,?,?)",negocio,text(body,"descripcion"),rubro,id);
     return Map.of("message","Registro exitoso","idUsuario",id);
   }
   @PostMapping("/logout") public Map<String,String> logout(HttpSession s) { s.invalidate(); return Map.of("message","Sesión cerrada correctamente"); }

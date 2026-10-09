@@ -1,5 +1,6 @@
 package com.smartagenda.api;
 
+import jakarta.servlet.http.HttpSession;
 import java.time.*;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
@@ -20,7 +21,28 @@ public class RecomendacionController {
   public Map<String, Object> get(
       @RequestParam int idProfesional,
       @RequestParam int idServicio,
-      @RequestParam String fecha) {
+      @RequestParam String fecha,
+      @RequestParam(required = false) Integer excluirIdTurno,
+      HttpSession session) {
+    if (excluirIdTurno != null) {
+      Map<String, Object> user = SessionSupport.user(session);
+      List<Map<String, Object>> matching = jdbc.queryForList(
+          "SELECT idCliente,idProfesional,idServicio,estado FROM turno WHERE idTurno=?", excluirIdTurno);
+      if (matching.isEmpty()) throw new ApiException(HttpStatus.NOT_FOUND, "Turno no encontrado");
+      Map<String, Object> appointment = matching.getFirst();
+      String role = String.valueOf(user.get("rol"));
+      boolean authorized = "Administrador".equals(role)
+          || ("Cliente".equals(role) && ((Number) appointment.get("idCliente")).intValue()
+              == SessionSupport.intValue(user, "idUsuario"))
+          || ("Profesional".equals(role) && ((Number) appointment.get("idProfesional")).intValue()
+              == SessionSupport.intValue(user, "idProfesional"));
+      if (!authorized) throw new ApiException(HttpStatus.FORBIDDEN, "No tiene acceso a este turno");
+      if (((Number) appointment.get("idProfesional")).intValue() != idProfesional
+          || ((Number) appointment.get("idServicio")).intValue() != idServicio
+          || !List.of("pendiente", "confirmado").contains(String.valueOf(appointment.get("estado")))) {
+        throw new ApiException(HttpStatus.BAD_REQUEST, "El turno no admite reprogramación");
+      }
+    }
     LocalDate date;
     try {
       date = LocalDate.parse(fecha);
@@ -53,10 +75,13 @@ public class RecomendacionController {
     LocalTime workStart = time(row.get("horaInicio"));
     LocalTime workEnd = time(row.get("horaFin"));
     int interval = ((Number) row.get("intervaloMin")).intValue();
-    List<Appointment> appointments = jdbc.queryForList(
-            "SELECT horaInicio,horaFin FROM turno WHERE idProfesional=? AND fecha=? "
-                + "AND estado IN ('pendiente','confirmado') ORDER BY horaInicio",
-            idProfesional, fecha)
+    String bookedSql = "SELECT horaInicio,horaFin FROM turno WHERE idProfesional=? AND fecha=? "
+        + "AND estado IN ('pendiente','confirmado')"
+        + (excluirIdTurno == null ? "" : " AND idTurno<>?") + " ORDER BY horaInicio";
+    Object[] bookedParams = excluirIdTurno == null
+        ? new Object[] { idProfesional, fecha }
+        : new Object[] { idProfesional, fecha, excluirIdTurno };
+    List<Appointment> appointments = jdbc.queryForList(bookedSql, bookedParams)
         .stream()
         .map(a -> new Appointment(time(a.get("horaInicio")), time(a.get("horaFin"))))
         .toList();

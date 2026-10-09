@@ -12,6 +12,8 @@ export default function Sidebar() {
       { to: '/servicios', icon: 'fa-briefcase', label: 'Servicios' },
       { to: '/disponibilidad', icon: 'fa-clock', label: 'Disponibilidad' },
       { to: '/agenda', icon: 'fa-calendar-alt', label: 'Agenda' },
+      { to: '/nuevo-turno', icon: 'fa-calendar-plus', label: 'Nuevo turno' },
+      { to: '/historial-turnos', icon: 'fa-history', label: 'Historial' },
       { to: '/reportes', icon: 'fa-chart-bar', label: 'Reportes' },
       { to: '/perfil', icon: 'fa-user-cog', label: 'Perfil' },
     ],

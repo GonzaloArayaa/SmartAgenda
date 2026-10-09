@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { turnos } from '../services/api';
 
@@ -20,7 +21,7 @@ function getWeekDates(baseDate) {
 }
 
 function formatDate(date) {
-  return date.toISOString().split('T')[0];
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
 }
 
 function formatDateShort(date) {
@@ -54,8 +55,16 @@ export default function Agenda() {
   }
 
   useEffect(() => {
-    fetchTurnos();
-  }, [baseDate]);
+    let active = true;
+    const dates = getWeekDates(baseDate);
+    const params = new URLSearchParams({ idProfesional: user.idProfesional,
+      fechaDesde: formatDate(dates[0]), fechaHasta: formatDate(dates[6]) });
+    turnos.getAll(params.toString())
+      .then((data) => { if (active) setTurnosList(Array.isArray(data) ? data : []); })
+      .catch(() => { if (active) setTurnosList([]); })
+      .finally(() => { if (active) setLoading(false); });
+    return () => { active = false; };
+  }, [baseDate, user.idProfesional]);
 
   function prevWeek() {
     const d = new Date(baseDate);
@@ -108,6 +117,11 @@ export default function Agenda() {
         </div>
         <div className="agenda-hero-summary"><div><span>Turnos</span><strong>{totalSemana}</strong></div><div><span>Confirmados</span><strong>{confirmados}</strong></div></div>
       </section>
+
+      <div className="agenda-primary-actions">
+        <Link className="module-primary-btn" to="/nuevo-turno"><i className="fas fa-plus" /> Crear turno</Link>
+        <Link className="appointment-hero-link" to="/historial-turnos"><i className="fas fa-history" /> Ver historial</Link>
+      </div>
 
       <section className="agenda-toolbar">
         <div><span>SEMANA ACTUAL</span><h3>{formatDateShort(weekDates[0])} — {formatDateShort(weekDates[6])} <small>{weekDates[0].getFullYear()}</small></h3></div>
@@ -188,7 +202,7 @@ export default function Agenda() {
             </div>
 
             <div className="modal-footer" style={{ flexWrap: 'wrap' }}>
-              {selectedTurno.estado === 'Pendiente' && (
+              {selectedTurno.estado === 'pendiente' && (
                 <button
                   className="btn btn-success btn-sm"
                   onClick={() => handleCambiarEstado(selectedTurno, 'Confirmado')}
@@ -196,7 +210,7 @@ export default function Agenda() {
                   <i className="fas fa-check"></i> Confirmar
                 </button>
               )}
-              {(selectedTurno.estado === 'Pendiente' || selectedTurno.estado === 'Confirmado') && (
+              {(selectedTurno.estado === 'pendiente' || selectedTurno.estado === 'confirmado') && (
                 <>
                   <button
                     className="btn btn-danger btn-sm"
@@ -204,12 +218,10 @@ export default function Agenda() {
                   >
                     <i className="fas fa-times"></i> Cancelar
                   </button>
-                  <button
+                  {selectedTurno.estado === 'confirmado' && <button
                     className="btn btn-primary btn-sm"
                     onClick={() => handleCambiarEstado(selectedTurno, 'Finalizado')}
-                  >
-                    <i className="fas fa-flag-checkered"></i> Finalizar
-                  </button>
+                  ><i className="fas fa-flag-checkered"></i> Finalizar</button>}
                 </>
               )}
               <button className="btn btn-outline btn-sm" onClick={() => setSelectedTurno(null)}>
