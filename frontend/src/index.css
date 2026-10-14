@@ -2394,3 +2394,14 @@ input, select, textarea { font-family: inherit; }
 @media(max-width:560px){ .users-row .admin-directory-state { grid-column:3; grid-row:1; } .users-row>button { grid-column:2/-1; } }
 @keyframes users-panel-in-movil { from { opacity:0; clip-path:inset(0 0 100% 0); } }
 @media (prefers-reduced-motion: reduce) { .users-panel { animation:none; } .users-group-card, .users-group-icon { transition:none; } }
+
+/* Agenda: aviso tras reprogramar */
+.agenda-aviso { display:flex; align-items:center; gap:9px; }
+.agenda-aviso button { margin-left:auto; border:0; background:transparent; color:inherit; cursor:pointer; }
+
+/* Estado vacío de las pantallas del cliente en modo oscuro (Lista de Espera, Mis Turnos, Buscar) */
+[data-theme="dark"] .client-empty-state { border-color:#334159; background:#182238; }
+[data-theme="dark"] .client-empty-state>div { background:#26334f; color:#ff9a5c; }
+[data-theme="dark"] .client-empty-state h3 { color:#f3f5fb; }
+[data-theme="dark"] .client-empty-state p { color:#8f9db3; }
+[data-theme="dark"] .client-empty-state a, [data-theme="dark"] .client-empty-state button { color:#ff9a5c; }

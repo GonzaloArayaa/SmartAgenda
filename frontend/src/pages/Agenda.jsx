@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { turnos } from '../services/api';
+import AppointmentSlotPicker from '../components/AppointmentSlotPicker';
 import { fechaLocal, horaCorta } from '../utils/fecha';
 
 const DIAS_SEMANA = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
@@ -38,6 +39,13 @@ export default function Agenda() {
   const [selectedTurno, setSelectedTurno] = useState(null);
   // Día que se muestra en celulares (en pantallas grandes se ve la semana completa)
   const [diaSeleccionado, setDiaSeleccionado] = useState(() => indiceEnSemana(new Date()));
+  // Reprogramación del turno abierto en el detalle
+  const [reprogramando, setReprogramando] = useState(false);
+  const [fechaNueva, setFechaNueva] = useState('');
+  const [horaNueva, setHoraNueva] = useState('');
+  const [guardando, setGuardando] = useState(false);
+  const [errorReprogramar, setErrorReprogramar] = useState('');
+  const [aviso, setAviso] = useState('');
 
   const weekDates = getWeekDates(baseDate);
 
@@ -101,6 +109,41 @@ export default function Agenda() {
     return turnosList.filter((t) => t.fecha === fecha);
   }
 
+  function cerrarDetalle() {
+    setSelectedTurno(null);
+    setReprogramando(false);
+    setErrorReprogramar('');
+  }
+
+  function abrirReprogramar() {
+    setFechaNueva(selectedTurno.fecha < fechaLocal() ? '' : selectedTurno.fecha);
+    setHoraNueva('');
+    setErrorReprogramar('');
+    setReprogramando(true);
+  }
+
+  async function guardarReprogramacion(event) {
+    event.preventDefault();
+    if (!fechaNueva || !horaNueva) return;
+    setGuardando(true);
+    setErrorReprogramar('');
+    try {
+      await turnos.update({ idTurno: selectedTurno.idTurno, accion: 'reprogramar',
+        fecha: fechaNueva, horaInicio: horaNueva });
+      // Se muestra la semana del nuevo horario para que el cambio quede a la vista
+      const [anio, mes, dia] = fechaNueva.split('-').map(Number);
+      const destino = new Date(anio, mes - 1, dia);
+      setBaseDate(destino);
+      setDiaSeleccionado(indiceEnSemana(destino));
+      setAviso(`Turno reprogramado para el ${dia}/${mes} a las ${horaNueva}.`);
+      cerrarDetalle();
+    } catch (err) {
+      setErrorReprogramar(err.message || 'No se pudo reprogramar el turno.');
+    } finally {
+      setGuardando(false);
+    }
+  }
+
   async function handleCambiarEstado(turno, nuevoEstado) {
     try {
       const acciones = { Confirmado: 'confirmar', Cancelado: 'cancelar', Finalizado: 'finalizar' };
@@ -111,7 +154,7 @@ export default function Agenda() {
         payload.motivo = motivo;
       }
       await turnos.update(payload);
-      setSelectedTurno(null);
+      cerrarDetalle();
       fetchTurnos();
     } catch (err) {
       alert(err.message || 'Error al actualizar el turno.');
@@ -137,6 +180,11 @@ export default function Agenda() {
         <Link className="module-primary-btn" to="/nuevo-turno"><i className="fas fa-plus" /> Crear turno</Link>
         <Link className="appointment-hero-link" to="/historial-turnos"><i className="fas fa-history" /> Ver historial</Link>
       </div>
+
+      {aviso && <p className="appointment-feedback success agenda-aviso" role="status">
+        <i className="fas fa-check-circle" /> {aviso}
+        <button type="button" onClick={() => setAviso('')} aria-label="Cerrar aviso"><i className="fas fa-times" /></button>
+      </p>}
 
       <section className="agenda-toolbar">
         <div><span>SEMANA ACTUAL</span><h3>{formatDateShort(weekDates[0])} — {formatDateShort(weekDates[6])} <small>{weekDates[0].getFullYear()}</small></h3></div>
@@ -205,69 +253,93 @@ export default function Agenda() {
       )}
 
       {selectedTurno && (
-        <div className="modal-overlay module-modal-overlay" onClick={() => setSelectedTurno(null)}>
+        <div className="modal-overlay module-modal-overlay" onClick={cerrarDetalle}>
           <div className="modal module-modal appointment-modal" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
-              <div><span>DETALLE DE ATENCIÓN</span><h3>{horaCorta(selectedTurno.horaInicio)} · {selectedTurno.fecha}</h3></div>
-              <button className="modal-close" onClick={() => setSelectedTurno(null)}>
+              <div>
+                <span>{reprogramando ? 'CAMBIAR FECHA Y HORARIO' : 'DETALLE DE ATENCIÓN'}</span>
+                <h3>{reprogramando ? 'Reprogramar turno' : `${horaCorta(selectedTurno.horaInicio)} · ${selectedTurno.fecha}`}</h3>
+              </div>
+              <button className="modal-close" onClick={cerrarDetalle} aria-label="Cerrar">
                 <i className="fas fa-times"></i>
               </button>
             </div>
 
-            <div className="appointment-detail-grid">
-              <div className="form-group">
-                <label className="form-label">Cliente</label>
-                <p>{selectedTurno.cliente_nombre ? `${selectedTurno.cliente_nombre} ${selectedTurno.cliente_apellido || ''}` : selectedTurno.nombreCliente || selectedTurno.cliente || '-'}</p>
-              </div>
-              <div className="form-group">
-                <label className="form-label">Servicio</label>
-                <p>{selectedTurno.servicio_nombre || selectedTurno.nombreServicio || selectedTurno.servicio || '-'}</p>
-              </div>
-              <div className="form-row">
-                <div className="form-group">
-                  <label className="form-label">Fecha</label>
-                  <p>{selectedTurno.fecha}</p>
-                </div>
-                <div className="form-group">
-                  <label className="form-label">Hora</label>
-                  <p>{horaCorta(selectedTurno.horaInicio)}</p>
-                </div>
-              </div>
-              <div className="form-group">
-                <label className="form-label">Estado</label>
-                <span className={`badge badge-${(selectedTurno.estado || '').toLowerCase()}`}>
-                  {selectedTurno.estado}
-                </span>
-              </div>
-            </div>
-
-            <div className="modal-footer" style={{ flexWrap: 'wrap' }}>
-              {selectedTurno.estado === 'pendiente' && (
-                <button
-                  className="btn btn-success btn-sm"
-                  onClick={() => handleCambiarEstado(selectedTurno, 'Confirmado')}
-                >
-                  <i className="fas fa-check"></i> Confirmar
-                </button>
-              )}
-              {(selectedTurno.estado === 'pendiente' || selectedTurno.estado === 'confirmado') && (
-                <>
-                  <button
-                    className="btn btn-danger btn-sm"
-                    onClick={() => handleCambiarEstado(selectedTurno, 'Cancelado')}
-                  >
-                    <i className="fas fa-times"></i> Cancelar
+            {reprogramando ? (
+              <form onSubmit={guardarReprogramacion} className="appointment-modal-content">
+                <p>Elegí un horario disponible para {selectedTurno.servicio_nombre || 'el servicio'} de {selectedTurno.cliente_nombre ? `${selectedTurno.cliente_nombre} ${selectedTurno.cliente_apellido || ''}` : 'tu cliente'}.</p>
+                {errorReprogramar && <p className="appointment-feedback error" role="alert">{errorReprogramar}</p>}
+                <AppointmentSlotPicker key={selectedTurno.idTurno} professionalId={selectedTurno.idProfesional}
+                  serviceId={selectedTurno.idServicio} excludedAppointmentId={selectedTurno.idTurno}
+                  date={fechaNueva} onDateChange={setFechaNueva} time={horaNueva} onTimeChange={setHoraNueva} />
+                <div className="appointment-workspace-actions">
+                  <button type="button" className="appointment-text-button" onClick={() => setReprogramando(false)}>Volver</button>
+                  <button type="submit" className="module-primary-btn" disabled={!horaNueva || guardando}>
+                    {guardando ? 'Guardando…' : 'Confirmar cambio'}
                   </button>
-                  {selectedTurno.estado === 'confirmado' && <button
-                    className="btn btn-primary btn-sm"
-                    onClick={() => handleCambiarEstado(selectedTurno, 'Finalizado')}
-                  ><i className="fas fa-flag-checkered"></i> Finalizar</button>}
-                </>
-              )}
-              <button className="btn btn-outline btn-sm" onClick={() => setSelectedTurno(null)}>
-                Cerrar
-              </button>
-            </div>
+                </div>
+              </form>
+            ) : (
+              <>
+                <div className="appointment-detail-grid">
+                  <div className="form-group">
+                    <label className="form-label">Cliente</label>
+                    <p>{selectedTurno.cliente_nombre ? `${selectedTurno.cliente_nombre} ${selectedTurno.cliente_apellido || ''}` : selectedTurno.nombreCliente || selectedTurno.cliente || '-'}</p>
+                  </div>
+                  <div className="form-group">
+                    <label className="form-label">Servicio</label>
+                    <p>{selectedTurno.servicio_nombre || selectedTurno.nombreServicio || selectedTurno.servicio || '-'}</p>
+                  </div>
+                  <div className="form-row">
+                    <div className="form-group">
+                      <label className="form-label">Fecha</label>
+                      <p>{selectedTurno.fecha}</p>
+                    </div>
+                    <div className="form-group">
+                      <label className="form-label">Hora</label>
+                      <p>{horaCorta(selectedTurno.horaInicio)}</p>
+                    </div>
+                  </div>
+                  <div className="form-group">
+                    <label className="form-label">Estado</label>
+                    <span className={`badge badge-${(selectedTurno.estado || '').toLowerCase()}`}>
+                      {selectedTurno.estado}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="modal-footer" style={{ flexWrap: 'wrap' }}>
+                  {selectedTurno.estado === 'pendiente' && (
+                    <button
+                      className="btn btn-success btn-sm"
+                      onClick={() => handleCambiarEstado(selectedTurno, 'Confirmado')}
+                    >
+                      <i className="fas fa-check"></i> Confirmar
+                    </button>
+                  )}
+                  {(selectedTurno.estado === 'pendiente' || selectedTurno.estado === 'confirmado') && (
+                    <>
+                      <button className="btn btn-outline btn-sm" onClick={abrirReprogramar}>
+                        <i className="far fa-calendar-alt"></i> Reprogramar
+                      </button>
+                      <button
+                        className="btn btn-danger btn-sm"
+                        onClick={() => handleCambiarEstado(selectedTurno, 'Cancelado')}
+                      >
+                        <i className="fas fa-times"></i> Cancelar
+                      </button>
+                      {selectedTurno.estado === 'confirmado' && <button
+                        className="btn btn-primary btn-sm"
+                        onClick={() => handleCambiarEstado(selectedTurno, 'Finalizado')}
+                      ><i className="fas fa-flag-checkered"></i> Finalizar</button>}
+                    </>
+                  )}
+                  <button className="btn btn-outline btn-sm" onClick={cerrarDetalle}>
+                    Cerrar
+                  </button>
+                </div>
+              </>
+            )}
           </div>
         </div>
       )}
