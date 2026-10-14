@@ -1,6 +1,6 @@
 import { NavLink } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import logoSmartAgendaDark from '../../assets/smartagenda-logo-dark.png';
+import SmartAgendaLogo, { resetLogoAnimation } from './SmartAgendaLogo';
 
 export default function Sidebar() {
   const { user, logout } = useAuth();
@@ -35,10 +35,16 @@ export default function Sidebar() {
   const items = menuItems[rol] || [];
   const initials = user ? (user.nombre[0] + user.apellido[0]).toUpperCase() : '?';
 
+  function handleLogout() {
+    // Al volver a iniciar sesión el logo repite su secuencia de entrada.
+    resetLogoAnimation();
+    logout();
+  }
+
   return (
     <aside className="sidebar">
       <div className="sidebar-brand">
-        <img src={logoSmartAgendaDark} alt="SmartAgenda Pro" />
+        <SmartAgendaLogo />
       </div>
 
       <nav className="sidebar-nav">
@@ -63,7 +69,7 @@ export default function Sidebar() {
             <span className="sidebar-role-pill"><i className="fas fa-circle" /> {rol}</span>
           </div>
         </div>
-        <button className="sidebar-logout" onClick={logout} title="Cerrar sesión"><i className="fas fa-sign-out-alt"></i></button>
+        <button className="sidebar-logout" onClick={handleLogout} title="Cerrar sesión"><i className="fas fa-sign-out-alt"></i></button>
       </div>
     </aside>
   );
