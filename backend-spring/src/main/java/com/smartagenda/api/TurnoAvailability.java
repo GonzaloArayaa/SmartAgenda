@@ -1,6 +1,5 @@
 package com.smartagenda.api;
 
-import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
@@ -46,16 +45,21 @@ public class TurnoAvailability {
 
     List<Map<String, Object>> rows = jdbc.queryForList(
         "SELECT horaInicio,horaFin,intervaloMin FROM disponibilidad WHERE idProfesional=? AND diaSemana=?",
-        professionalId, dayName(date.getDayOfWeek()));
+        professionalId, Horarios.dia(date.getDayOfWeek()));
     if (rows.isEmpty()) {
       throw new ApiException(HttpStatus.CONFLICT, "El profesional no atiende ese día");
     }
-    Map<String, Object> availability = rows.getFirst();
-    LocalTime workStart = parseTime(availability.get("horaInicio"));
-    LocalTime workEnd = parseTime(availability.get("horaFin"));
-    int interval = ((Number) availability.get("intervaloMin")).intValue();
-    if (interval <= 0 || start.isBefore(workStart) || end.isAfter(workEnd)
-        || (java.time.Duration.between(workStart, start).toMinutes() % interval) != 0) {
+    // Con horario cortado el día tiene varios tramos: el turno debe entrar completo en alguno
+    final LocalTime slotStart = start;
+    final LocalTime slotEnd = end;
+    boolean respetaDisponibilidad = rows.stream().anyMatch(range -> {
+      LocalTime workStart = Horarios.hora(range.get("horaInicio"));
+      LocalTime workEnd = Horarios.hora(range.get("horaFin"));
+      int interval = ((Number) range.get("intervaloMin")).intValue();
+      return interval > 0 && !slotStart.isBefore(workStart) && !slotEnd.isAfter(workEnd)
+          && (java.time.Duration.between(workStart, slotStart).toMinutes() % interval) == 0;
+    });
+    if (!respetaDisponibilidad) {
       throw new ApiException(HttpStatus.CONFLICT, "El horario no respeta la disponibilidad del profesional");
     }
 
@@ -81,23 +85,6 @@ public class TurnoAvailability {
       throw new ApiException(HttpStatus.CONFLICT, "El cliente ya tiene un turno en ese horario");
     }
     return new Slot(date, start, end);
-  }
-
-  private LocalTime parseTime(Object value) {
-    if (value instanceof java.sql.Time sqlTime) return sqlTime.toLocalTime();
-    return LocalTime.parse(String.valueOf(value));
-  }
-
-  private String dayName(DayOfWeek day) {
-    return switch (day) {
-      case MONDAY -> "Lunes";
-      case TUESDAY -> "Martes";
-      case WEDNESDAY -> "Miercoles";
-      case THURSDAY -> "Jueves";
-      case FRIDAY -> "Viernes";
-      case SATURDAY -> "Sabado";
-      case SUNDAY -> "Domingo";
-    };
   }
 
   public record Slot(LocalDate date, LocalTime start, LocalTime end) {}

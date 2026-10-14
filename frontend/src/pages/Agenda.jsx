@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { turnos } from '../services/api';
+import { turnos, huecos as huecosApi } from '../services/api';
 import AppointmentSlotPicker from '../components/AppointmentSlotPicker';
 import { fechaLocal, horaCorta } from '../utils/fecha';
+import { duracionTexto } from '../utils/huecos';
 
 const DIAS_SEMANA = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
 
@@ -46,6 +47,8 @@ export default function Agenda() {
   const [guardando, setGuardando] = useState(false);
   const [errorReprogramar, setErrorReprogramar] = useState('');
   const [aviso, setAviso] = useState('');
+  // Huecos (espacios libres) de la semana que se está viendo
+  const [huecosSemana, setHuecosSemana] = useState(null);
 
   const weekDates = getWeekDates(baseDate);
 
@@ -77,6 +80,17 @@ export default function Agenda() {
       .finally(() => { if (active) setLoading(false); });
     return () => { active = false; };
   }, [baseDate, user.idProfesional]);
+
+  const desdeSemana = fechaLocal(weekDates[0]);
+  const hastaSemana = fechaLocal(weekDates[6]);
+  // Se recalculan cada vez que cambia la semana o los turnos (reserva, cancelación, reprogramación)
+  useEffect(() => {
+    let active = true;
+    huecosApi.get(user.idProfesional, desdeSemana, hastaSemana)
+      .then((data) => { if (active) setHuecosSemana(data); })
+      .catch(() => { if (active) setHuecosSemana(null); });
+    return () => { active = false; };
+  }, [user.idProfesional, desdeSemana, hastaSemana, turnosList]);
 
   function prevWeek() {
     const d = new Date(baseDate);
@@ -195,6 +209,14 @@ export default function Agenda() {
         </div>
       </section>
 
+      {huecosSemana && huecosSemana.resumen.cantidadHuecos > 0 && (
+        <p className="agenda-huecos-resumen">
+          <i className="far fa-clock" />
+          <span><strong>{duracionTexto(huecosSemana.resumen.minutosAprovechables)}</strong> libres para reservar esta semana
+            {huecosSemana.resumen.minutosMuertos > 0 && <> · {duracionTexto(huecosSemana.resumen.minutosMuertos)} en huecos muy cortos</>}</span>
+        </p>
+      )}
+
       <div className="agenda-day-picker" role="tablist" aria-label="Día de la semana">
         {weekDates.map((date, i) => {
           const fechaStr = fechaLocal(date);
@@ -229,6 +251,7 @@ export default function Agenda() {
             const esHoy = fechaStr === hoy;
             const turnosDelDia = getTurnosByDate(fechaStr);
             const dayIndex = date.getDay();
+            const huecosDelDia = huecosSemana?.dias.find((d) => d.fecha === fechaStr)?.huecos || [];
 
             return (
               <article key={i} className={`modern-day-column ${esHoy ? 'is-today' : ''} ${i === diaSeleccionado ? 'is-selected' : ''}`}>
@@ -244,6 +267,18 @@ export default function Agenda() {
                       <span>{t.servicio_nombre || t.nombreServicio || t.servicio || 'Servicio'}</span>
                     </button>
                   ))
+                )}
+                {huecosDelDia.length > 0 && (
+                  <ul className="agenda-huecos" aria-label={`Huecos del ${DIAS_SEMANA[dayIndex]}`}>
+                    {huecosDelDia.map((hueco) => (
+                      <li key={hueco.horaInicio} className={hueco.aprovechable ? 'is-aprovechable' : 'is-muerto'}
+                        title={hueco.aprovechable ? 'Hueco libre: se puede reservar un servicio' : 'Hueco muy corto: no alcanza para ningún servicio'}>
+                        <i className={hueco.aprovechable ? 'far fa-clock' : 'fas fa-ban'} />
+                        <time>{hueco.horaInicio} – {hueco.horaFin}</time>
+                        <small>{duracionTexto(hueco.duracionMin)}{hueco.aprovechable ? '' : ' · corto'}</small>
+                      </li>
+                    ))}
+                  </ul>
                 )}
                 </div>
               </article>

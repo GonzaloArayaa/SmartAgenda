@@ -2405,3 +2405,51 @@ input, select, textarea { font-family: inherit; }
 [data-theme="dark"] .client-empty-state h3 { color:#f3f5fb; }
 [data-theme="dark"] .client-empty-state p { color:#8f9db3; }
 [data-theme="dark"] .client-empty-state a, [data-theme="dark"] .client-empty-state button { color:#ff9a5c; }
+
+/* Huecos de la agenda: Agenda semanal y Dashboard del profesional */
+.agenda-huecos-resumen { display:flex; align-items:center; gap:10px; margin:0 0 14px; padding:11px 15px; border:1px solid #cce1d6; border-radius:10px; background:#f1f8f4; color:#367c5d; font-size:.74rem; }
+.agenda-huecos-resumen i { font-size:.95rem; }
+.agenda-huecos-resumen strong { color:#2a6b4e; }
+.agenda-huecos { display:grid; gap:5px; margin:8px 0 0; padding:0; list-style:none; }
+.agenda-huecos li { display:grid; grid-template-columns:auto 1fr; align-items:center; gap:2px 7px; padding:7px 9px; border:1px dashed #b9d9c7; border-radius:8px; background:#f6fbf8; color:#367c5d; font-size:.62rem; }
+.agenda-huecos li time { font-weight:800; }
+.agenda-huecos li small { grid-column:2; color:#6f9a84; font-size:.56rem; }
+.agenda-huecos li.is-muerto { border-color:#ddd5cc; background:#f6f3ef; color:#8a93a2; }
+.agenda-huecos li.is-muerto small { color:#9aa1ad; }
+
+.pro-huecos-card { margin-bottom:18px; padding:20px 22px; border:1px solid #e3dbd2; border-radius:15px; background:#fffdfa; }
+.pro-huecos-metricas { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin-bottom:14px; }
+.pro-huecos-metricas>div { padding:12px 14px; border:1px solid #eee7e0; border-radius:10px; background:#fff; }
+.pro-huecos-metricas span { display:block; color:#8992a1; font-size:.6rem; }
+.pro-huecos-metricas strong { display:block; margin-top:4px; color:#263249; font-size:1.05rem; }
+.pro-huecos-metricas>div:nth-child(2) strong { color:#2f8f5b; }
+.pro-huecos-lista { display:flex; flex-wrap:wrap; gap:8px; margin:0; padding:0; list-style:none; }
+.pro-huecos-lista li { display:flex; align-items:center; gap:7px; padding:7px 11px; border:1px dashed #b9d9c7; border-radius:999px; background:#f6fbf8; color:#367c5d; font-size:.7rem; font-weight:700; }
+.pro-huecos-lista small { color:#6f9a84; font-size:.6rem; font-weight:600; }
+.pro-huecos-vacio, .pro-huecos-proximo { margin:0; color:#7d8797; font-size:.74rem; }
+.pro-huecos-vacio i { margin-right:7px; color:#d66a4d; }
+.pro-huecos-proximo { margin-top:10px; }
+.pro-huecos-proximo strong { color:#263249; }
+
+/* Disponibilidad: varios tramos por día (horario cortado) */
+.week-day-row.has-ranges { grid-template-columns:minmax(210px,1.2fr) minmax(0,3fr); align-items:start; padding:12px 7px; }
+.week-day-row.has-ranges .week-day-name { min-height:54px; }
+.week-day-ranges { display:grid; gap:2px; }
+.week-day-range { display:grid; grid-template-columns:minmax(190px,1fr) 120px 86px; align-items:center; gap:24px; min-height:54px; }
+.week-day-range+.week-day-range { border-top:1px dashed #eee7e0; }
+.week-day-add-range { justify-self:start; margin:4px 0 2px; }
+
+[data-theme="dark"] .agenda-huecos-resumen { border-color:#2b5a45; background:#14251f; color:#6fd1a0; }
+[data-theme="dark"] .agenda-huecos-resumen strong { color:#8fe0b8; }
+[data-theme="dark"] .agenda-huecos li { border-color:#2b5a45; background:#14251f; color:#6fd1a0; }
+[data-theme="dark"] .agenda-huecos li small { color:#5fae8a; }
+[data-theme="dark"] .agenda-huecos li.is-muerto { border-color:#334159; background:#182238; color:#8f9db3; }
+[data-theme="dark"] .pro-huecos-card { border-color:#2d3a54; background:#182238; }
+[data-theme="dark"] .pro-huecos-metricas>div { border-color:#2d3a54; background:#111a2b; }
+[data-theme="dark"] .pro-huecos-metricas strong, [data-theme="dark"] .pro-huecos-proximo strong { color:#f3f5fb; }
+[data-theme="dark"] .pro-huecos-metricas>div:nth-child(2) strong { color:#6fd1a0; }
+[data-theme="dark"] .pro-huecos-lista li { border-color:#2b5a45; background:#14251f; color:#6fd1a0; }
+[data-theme="dark"] .pro-huecos-vacio, [data-theme="dark"] .pro-huecos-proximo { color:#8f9db3; }
+[data-theme="dark"] .week-day-range+.week-day-range { border-color:#2d3a54; }
+@media(max-width:900px){ .week-day-row.has-ranges { grid-template-columns:1.2fr 3fr; gap:12px; } .week-day-range { grid-template-columns:1.2fr 100px 76px; gap:12px; } }
+@media(max-width:640px){ .pro-huecos-metricas { grid-template-columns:1fr; } .week-day-row.has-ranges { grid-template-columns:1fr; } .week-day-range { grid-template-columns:1fr auto; } .week-day-range .week-day-interval { display:none; } }
