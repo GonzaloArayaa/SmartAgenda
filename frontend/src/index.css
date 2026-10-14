@@ -1757,6 +1757,25 @@ input, select, textarea { font-family: inherit; }
 .sidebar { width:244px; background:#182238; border:0; box-shadow:10px 0 30px rgba(24,34,56,.08); }
 .sidebar-brand { height:112px; padding:18px 27px; border-bottom:1px solid rgba(255,255,255,.10); }
 .sidebar-brand img { display:block; width:158px; height:72px; object-fit:contain; }
+.brand-logo { display:block; width:158px; height:72px; overflow:visible; }
+/* Contorno de la aguja: mismo color que el fondo de la barra lateral. */
+.brand-logo-needle-cut { fill:#182238; stroke:#182238; stroke-width:33px; stroke-linejoin:round; }
+.brand-logo-needle { transform-box:view-box; transform-origin:835px 432px; }
+.brand-logo-shine { transform:translateX(0); }
+.brand-logo.is-playing .brand-logo-needle { animation:brand-logo-needle 1.2s both; }
+.brand-logo.is-playing .brand-logo-shine { animation:brand-logo-shine 1.5s cubic-bezier(.45,0,.25,1) 1.35s both; }
+/* Oscilación de brújula que se asienta y vuelve exactamente a 0°. */
+@keyframes brand-logo-needle {
+  0% { transform:rotate(0); animation-timing-function:cubic-bezier(.33,0,.2,1); }
+  38% { transform:rotate(-18deg); animation-timing-function:cubic-bezier(.45,0,.35,1); }
+  68% { transform:rotate(7deg); animation-timing-function:cubic-bezier(.45,0,.35,1); }
+  86% { transform:rotate(-2deg); animation-timing-function:cubic-bezier(.45,0,.4,1); }
+  100% { transform:rotate(0); }
+}
+@keyframes brand-logo-shine { from { transform:translateX(0); } to { transform:translateX(1700px); } }
+@media (prefers-reduced-motion: reduce) {
+  .brand-logo.is-playing .brand-logo-needle, .brand-logo.is-playing .brand-logo-shine { animation:none; }
+}
 .sidebar-nav { padding:20px 14px; }
 .sidebar-section { padding:9px 12px 11px; color:#8f9db3; font-size:.62rem; font-weight:800; letter-spacing:1.15px; }
 .sidebar-link { gap:12px; margin:3px 0; padding:11px 12px; border-radius:8px; color:#bbc5d3; font-size:.84rem; font-weight:600; }
