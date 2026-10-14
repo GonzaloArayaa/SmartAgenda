@@ -63,6 +63,11 @@ export const recomendaciones = {
   },
 };
 
+export const huecos = {
+  get: (idProfesional, desde, hasta = desde) =>
+    request(`huecos?${new URLSearchParams({ idProfesional, fechaDesde: desde, fechaHasta: hasta })}`),
+};
+
 export const reportes = {
   getEstadisticas: (params = '') => request(`reportes?tipo=general&${params}`),
   getRubros: () => request('reportes?tipo=rubros'),

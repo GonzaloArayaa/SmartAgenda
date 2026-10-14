@@ -34,9 +34,10 @@ public class DisponibilidadController {
     int intervalo = AuthController.number(b, "intervaloMin", 30);
     if (dia.isBlank() || inicio.isBlank() || fin.isBlank()) throw new ApiException(HttpStatus.BAD_REQUEST, "Datos incompletos");
     if (!DIAS.contains(dia)) throw new ApiException(HttpStatus.BAD_REQUEST, "Día de la semana no válido");
-    validarHorario(hora(inicio), hora(fin), intervalo);
-    if (jdbc.queryForObject("SELECT COUNT(*) FROM disponibilidad WHERE idProfesional=? AND diaSemana=?", Integer.class, p, dia) > 0)
-      throw new ApiException(HttpStatus.CONFLICT, "Ya existe configuración para ese día. Use PUT para actualizar.");
+    LocalTime horaInicio = hora(inicio), horaFin = hora(fin);
+    validarHorario(horaInicio, horaFin, intervalo);
+    // Un día puede tener varios tramos (horario cortado), siempre que no se superpongan
+    validarSinSuperposicion(p, dia, horaInicio, horaFin, null);
     jdbc.update("INSERT INTO disponibilidad(diaSemana,horaInicio,horaFin,intervaloMin,idProfesional) VALUES(?,?,?,?,?)", dia, inicio, fin, intervalo, p);
     return Map.of("message", "Disponibilidad configurada", "id", jdbc.queryForObject("SELECT LAST_INSERT_ID()", Integer.class));
   }
@@ -53,6 +54,7 @@ public class DisponibilidadController {
     LocalTime fin = b.containsKey("horaFin") ? hora(AuthController.text(b, "horaFin")) : hora(String.valueOf(actual.get("horaFin")));
     int intervalo = b.containsKey("intervaloMin") ? AuthController.number(b, "intervaloMin", 0) : ((Number) actual.get("intervaloMin")).intValue();
     validarHorario(inicio, fin, intervalo);
+    validarSinSuperposicion(((Number) actual.get("idProfesional")).intValue(), String.valueOf(actual.get("diaSemana")), inicio, fin, id);
     List<String> f = new ArrayList<>();
     List<Object> p = new ArrayList<>();
     for (String k : List.of("horaInicio", "horaFin", "intervaloMin")) ProfesionalController.add(b, k, f, p);
@@ -83,6 +85,22 @@ public class DisponibilidadController {
       return LocalTime.parse(texto);
     } catch (DateTimeParseException e) {
       throw new ApiException(HttpStatus.BAD_REQUEST, "Formato de hora no válido (use HH:MM)");
+    }
+  }
+
+  /** Dos tramos del mismo día se superponen si cada uno empieza antes de que termine el otro. */
+  private void validarSinSuperposicion(int idProfesional, String dia, LocalTime inicio, LocalTime fin, Integer excluirId) {
+    List<Object> params = new ArrayList<>(List.of(idProfesional, dia, fin, inicio));
+    String sql = "SELECT horaInicio,horaFin FROM disponibilidad WHERE idProfesional=? AND diaSemana=? AND horaInicio<? AND horaFin>?";
+    if (excluirId != null) {
+      sql += " AND idDisponibilidad<>?";
+      params.add(excluirId);
+    }
+    List<Map<String, Object>> choques = jdbc.queryForList(sql + " ORDER BY horaInicio LIMIT 1", params.toArray());
+    if (!choques.isEmpty()) {
+      Map<String, Object> otro = choques.getFirst();
+      throw new ApiException(HttpStatus.CONFLICT, "El horario se superpone con otro tramo del " + dia + " ("
+          + Horarios.hora(otro.get("horaInicio")) + " a " + Horarios.hora(otro.get("horaFin")) + ")");
     }
   }
 

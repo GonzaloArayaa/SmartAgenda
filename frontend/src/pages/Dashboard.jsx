@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import { reportes, turnos, usuarios } from '../services/api';
 import { normalizeReportStats } from '../utils/reportStats';
 import { fechaLocal } from '../utils/fecha';
+import HuecosHoy from '../components/HuecosHoy';
 
 export default function Dashboard() {
   const { user } = useAuth();
@@ -116,6 +117,8 @@ function DashboardProfesional({ user }) {
           </div>
         </article>
       </section>
+
+      <HuecosHoy idProfesional={user.idProfesional} />
 
       <section className="pro-agenda-card">
         <header className="pro-section-header">

@@ -62,19 +62,21 @@ public class RecomendacionController {
       throw new ApiException(HttpStatus.NOT_FOUND, "Servicio no encontrado");
     }
 
-    String day = dayName(date);
-    List<Map<String, Object>> availability = jdbc.queryForList(
-        "SELECT * FROM disponibilidad WHERE idProfesional=? AND diaSemana=?",
-        idProfesional, day);
-    if (availability.isEmpty()) {
+    String day = Horarios.dia(date.getDayOfWeek());
+    // Con horario cortado el día tiene varios tramos de atención; se recorren todos
+    List<Range> ranges = jdbc.queryForList(
+            "SELECT horaInicio,horaFin,intervaloMin FROM disponibilidad "
+                + "WHERE idProfesional=? AND diaSemana=? ORDER BY horaInicio",
+            idProfesional, day)
+        .stream()
+        .map(row -> new Range(Horarios.hora(row.get("horaInicio")), Horarios.hora(row.get("horaFin")),
+            ((Number) row.get("intervaloMin")).intValue()))
+        .toList();
+    if (ranges.isEmpty()) {
       return response(fecha, day, idProfesional, idServicio, duration, List.of(),
           "El profesional no atiende ese día", 0);
     }
 
-    Map<String, Object> row = availability.getFirst();
-    LocalTime workStart = time(row.get("horaInicio"));
-    LocalTime workEnd = time(row.get("horaFin"));
-    int interval = ((Number) row.get("intervaloMin")).intValue();
     String bookedSql = "SELECT horaInicio,horaFin FROM turno WHERE idProfesional=? AND fecha=? "
         + "AND estado IN ('pendiente','confirmado')"
         + (excluirIdTurno == null ? "" : " AND idTurno<>?") + " ORDER BY horaInicio";
@@ -83,7 +85,7 @@ public class RecomendacionController {
         : new Object[] { idProfesional, fecha, excluirIdTurno };
     List<Appointment> appointments = jdbc.queryForList(bookedSql, bookedParams)
         .stream()
-        .map(a -> new Appointment(time(a.get("horaInicio")), time(a.get("horaFin"))))
+        .map(a -> new Appointment(Horarios.hora(a.get("horaInicio")), Horarios.hora(a.get("horaFin"))))
         .toList();
 
     Map<LocalTime, Integer> demandByTime = new HashMap<>();
@@ -93,19 +95,26 @@ public class RecomendacionController {
                 + "GROUP BY horaInicio",
             idProfesional, fecha, fecha)
         .forEach(history -> demandByTime.put(
-            time(history.get("horaInicio")), ((Number) history.get("demanda")).intValue()));
+            Horarios.hora(history.get("horaInicio")), ((Number) history.get("demanda")).intValue()));
 
     List<Map<String, Object>> slots = new ArrayList<>();
-    for (LocalTime current = workStart;
-         !current.plusMinutes(duration).isAfter(workEnd);
-         current = current.plusMinutes(interval)) {
-      LocalTime slotStart = current;
-      LocalTime slotEnd = current.plusMinutes(duration);
-      if (date.equals(LocalDate.now()) && !slotStart.isAfter(LocalTime.now())) continue;
-      boolean free = appointments.stream().noneMatch(a -> overlaps(slotStart, slotEnd, a));
-      if (!free) continue;
-      slots.add(scoreSlot(slotStart, slotEnd, workStart, workEnd, duration,
-          appointments, demandByTime.getOrDefault(slotStart, 0)));
+    for (Range range : ranges) {
+      if (range.interval() <= 0) continue;
+      // Solo cuentan los turnos que caen dentro de este tramo para medir los espacios vecinos
+      List<Appointment> inRange = appointments.stream()
+          .filter(a -> a.start().isBefore(range.end()) && a.end().isAfter(range.start()))
+          .toList();
+      int rangeStart = Horarios.minutos(range.start());
+      int rangeEnd = Horarios.minutos(range.end());
+      for (int minute = rangeStart; minute + duration <= rangeEnd; minute += range.interval()) {
+        LocalTime slotStart = LocalTime.of(minute / 60, minute % 60);
+        LocalTime slotEnd = LocalTime.of((minute + duration) / 60, (minute + duration) % 60);
+        if (date.equals(LocalDate.now()) && !slotStart.isAfter(LocalTime.now())) continue;
+        boolean free = appointments.stream().noneMatch(a -> overlaps(slotStart, slotEnd, a));
+        if (!free) continue;
+        slots.add(scoreSlot(slotStart, slotEnd, range.start(), range.end(), duration,
+            inRange, demandByTime.getOrDefault(slotStart, 0)));
+      }
     }
 
     List<Map<String, Object>> ranking = new ArrayList<>(slots);
@@ -221,23 +230,7 @@ public class RecomendacionController {
     return start.isBefore(appointment.end()) && end.isAfter(appointment.start());
   }
 
-  private String dayName(LocalDate date) {
-    return switch (date.getDayOfWeek()) {
-      case MONDAY -> "Lunes";
-      case TUESDAY -> "Martes";
-      case WEDNESDAY -> "Miercoles";
-      case THURSDAY -> "Jueves";
-      case FRIDAY -> "Viernes";
-      case SATURDAY -> "Sabado";
-      case SUNDAY -> "Domingo";
-    };
-  }
-
-  private LocalTime time(Object value) {
-    return value instanceof java.sql.Time t
-        ? t.toLocalTime()
-        : LocalTime.parse(String.valueOf(value));
-  }
-
   private record Appointment(LocalTime start, LocalTime end) {}
+
+  private record Range(LocalTime start, LocalTime end, int interval) {}
 }
