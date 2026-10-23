@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { servicios, profesionales, recomendaciones, turnos, listaEspera } from '../services/api';
@@ -23,6 +23,10 @@ export default function Reservar() {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
   const [enEspera, setEnEspera] = useState(false);
+  // Filtros y orden de la lista de servicios (paso 1)
+  const [precioMax, setPrecioMax] = useState('');
+  const [duracionMax, setDuracionMax] = useState('');
+  const [orden, setOrden] = useState('');
 
   useEffect(() => {
     async function fetchData() {
@@ -42,6 +46,29 @@ export default function Reservar() {
     }
     fetchData();
   }, [idProfesional]);
+
+  // Duraciones que realmente existen entre los servicios, para ofrecerlas como opciones del filtro
+  const opcionesDuracion = useMemo(
+    () => [...new Set(listaServicios.map((s) => Number(s.duracionMin)).filter((d) => d > 0))].sort((a, b) => a - b),
+    [listaServicios],
+  );
+  const serviciosFiltrados = useMemo(() => {
+    const topePrecio = precioMax === '' ? null : Number(precioMax);
+    const topeDuracion = duracionMax === '' ? null : Number(duracionMax);
+    const lista = listaServicios.filter((s) =>
+      (topePrecio === null || Number(s.precio) <= topePrecio)
+      && (topeDuracion === null || Number(s.duracionMin) <= topeDuracion));
+    if (orden === 'precio-asc') lista.sort((a, b) => Number(a.precio) - Number(b.precio) || a.nombre.localeCompare(b.nombre));
+    if (orden === 'precio-desc') lista.sort((a, b) => Number(b.precio) - Number(a.precio) || a.nombre.localeCompare(b.nombre));
+    return lista;
+  }, [listaServicios, precioMax, duracionMax, orden]);
+  const hayFiltros = precioMax !== '' || duracionMax !== '' || orden !== '';
+
+  function limpiarFiltros() {
+    setPrecioMax('');
+    setDuracionMax('');
+    setOrden('');
+  }
 
   async function fetchSlots() {
     if (!servicioSeleccionado || !fecha) return;
@@ -262,19 +289,49 @@ export default function Reservar() {
               <p>Seleccioná una opción para consultar las fechas disponibles.</p>
             </div>
             <div className="booking-service-count">
-              <strong>{listaServicios.length}</strong>
-              <span>{listaServicios.length === 1 ? 'servicio' : 'servicios'}</span>
+              <strong>{serviciosFiltrados.length}</strong>
+              <span>{serviciosFiltrados.length === 1 ? 'servicio' : 'servicios'}</span>
             </div>
           </header>
+          {listaServicios.length > 1 && (
+            <div className="booking-filters" role="group" aria-label="Filtrar y ordenar servicios">
+              <label className="booking-filter-money">Precio máximo
+                <span aria-hidden="true">$</span>
+                <input type="number" min="0" step="500" inputMode="numeric" placeholder="Sin límite" value={precioMax} onChange={(e) => setPrecioMax(e.target.value)} />
+              </label>
+              <label>Duración
+                <select value={duracionMax} onChange={(e) => setDuracionMax(e.target.value)}>
+                  <option value="">Cualquiera</option>
+                  {opcionesDuracion.map((minutos) => <option key={minutos} value={minutos}>Hasta {minutos} min</option>)}
+                </select>
+              </label>
+              <label>Ordenar por
+                <select value={orden} onChange={(e) => setOrden(e.target.value)}>
+                  <option value="">Sin ordenar</option>
+                  <option value="precio-asc">Precio: menor a mayor</option>
+                  <option value="precio-desc">Precio: mayor a menor</option>
+                </select>
+              </label>
+              {hayFiltros && <button type="button" className="booking-filters-clear" onClick={limpiarFiltros}><i className="fas fa-times" /> Quitar filtros</button>}
+              <p className="booking-filters-summary" role="status">Mostrando <strong>{serviciosFiltrados.length}</strong> de {listaServicios.length}</p>
+            </div>
+          )}
           {listaServicios.length === 0 ? (
             <div className="empty-state">
               <i className="fas fa-concierge-bell"></i>
               <h3>Sin servicios disponibles</h3>
               <p>Este profesional aún no tiene servicios configurados.</p>
             </div>
+          ) : serviciosFiltrados.length === 0 ? (
+            <div className="booking-filter-empty">
+              <i className="fas fa-filter" />
+              <h3>Ningún servicio coincide con los filtros</h3>
+              <p>Probá con un precio más alto o con otra duración.</p>
+              <button type="button" className="booking-filters-clear" onClick={limpiarFiltros}>Quitar filtros</button>
+            </div>
           ) : (
             <div className="booking-service-grid">
-              {listaServicios.map((s, index) => (
+              {serviciosFiltrados.map((s, index) => (
                 <button
                   type="button"
                   key={s.idServicio}

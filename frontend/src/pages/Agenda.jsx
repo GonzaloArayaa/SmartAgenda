@@ -5,41 +5,51 @@ import { turnos, huecos as huecosApi } from '../services/api';
 import AppointmentSlotPicker from '../components/AppointmentSlotPicker';
 import { fechaLocal, horaCorta } from '../utils/fecha';
 import { duracionTexto } from '../utils/huecos';
+import {
+  semanaDe, indiceEnSemana, cuadriculaMes, rangoDeVista, moverFecha, minutosDeHora,
+} from '../utils/agendaFechas';
 
 const DIAS_SEMANA = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
+const DIAS_LARGOS = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];
+const ENCABEZADO_MES = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
+const MESES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
+const VISTAS = [{ id: 'dia', label: 'Día' }, { id: 'semana', label: 'Semana' }, { id: 'mes', label: 'Mes' }];
+const CLAVE_VISTA = 'smartagenda-agenda-vista';
 
-// Posición del día dentro de la semana de la agenda (0 = lunes ... 6 = domingo)
-function indiceEnSemana(date) {
-  return (date.getDay() + 6) % 7;
-}
+const mayuscula = (texto) => texto.charAt(0).toUpperCase() + texto.slice(1);
 
-function getWeekDates(baseDate) {
-  const d = new Date(baseDate);
-  const day = d.getDay();
-  const diff = d.getDate() - day + (day === 0 ? -6 : 1);
-  const lunes = new Date(d.setDate(diff));
-
-  const fechas = [];
-  for (let i = 0; i < 7; i++) {
-    const fecha = new Date(lunes);
-    fecha.setDate(lunes.getDate() + i);
-    fechas.push(fecha);
+// La vista elegida se recuerda en el navegador; si no se puede leer, arranca en la semana.
+function vistaGuardada() {
+  try {
+    const guardada = localStorage.getItem(CLAVE_VISTA);
+    return VISTAS.some((vista) => vista.id === guardada) ? guardada : 'semana';
+  } catch {
+    return 'semana';
   }
-  return fechas;
 }
 
 function formatDateShort(date) {
   return `${date.getDate()}/${date.getMonth() + 1}`;
 }
 
+function nombreCliente(turno) {
+  return turno.cliente_nombre ? `${turno.cliente_nombre} ${turno.cliente_apellido || ''}` : turno.nombreCliente || turno.cliente || 'Cliente';
+}
+
+function textoTurnos(cantidad) {
+  if (cantidad === 0) return 'sin turnos';
+  return cantidad === 1 ? '1 turno' : `${cantidad} turnos`;
+}
+
 export default function Agenda() {
   const { user } = useAuth();
-  const [baseDate, setBaseDate] = useState(new Date());
-  const [turnosList, setTurnosList] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [vista, setVista] = useState(vistaGuardada);
+  // Día seleccionado: es el mismo para las tres vistas, así no se pierde al cambiar de una a otra
+  const [baseDate, setBaseDate] = useState(() => new Date());
+  // Turnos del rango que se está viendo (el rango identifica a qué pedido pertenecen)
+  const [datos, setDatos] = useState({ rango: '', lista: [] });
+  const [recarga, setRecarga] = useState(0);
   const [selectedTurno, setSelectedTurno] = useState(null);
-  // Día que se muestra en celulares (en pantallas grandes se ve la semana completa)
-  const [diaSeleccionado, setDiaSeleccionado] = useState(() => indiceEnSemana(new Date()));
   // Reprogramación del turno abierto en el detalle
   const [reprogramando, setReprogramando] = useState(false);
   const [fechaNueva, setFechaNueva] = useState('');
@@ -47,66 +57,59 @@ export default function Agenda() {
   const [guardando, setGuardando] = useState(false);
   const [errorReprogramar, setErrorReprogramar] = useState('');
   const [aviso, setAviso] = useState('');
-  // Huecos (espacios libres) de la semana que se está viendo
-  const [huecosSemana, setHuecosSemana] = useState(null);
+  // Huecos (espacios libres) del rango que se está viendo (la vista mensual no los usa)
+  const [huecosRango, setHuecosRango] = useState(null);
 
-  const weekDates = getWeekDates(baseDate);
-
-  async function fetchTurnos() {
-    setLoading(true);
-    try {
-      const desde = fechaLocal(weekDates[0]);
-      const hasta = fechaLocal(weekDates[6]);
-      const data = await turnos.getAll(
-        `idProfesional=${user.idProfesional}&fechaDesde=${desde}&fechaHasta=${hasta}`
-      );
-      const arr = Array.isArray(data) ? data : data.turnos || [];
-      setTurnosList(arr);
-    } catch {
-      setTurnosList([]);
-    } finally {
-      setLoading(false);
-    }
-  }
+  const weekDates = semanaDe(baseDate);
+  // En celulares la semana muestra un día por vez: es el día seleccionado
+  const diaSeleccionado = indiceEnSemana(baseDate);
+  const { desde, hasta } = rangoDeVista(vista, baseDate);
+  const desdeStr = fechaLocal(desde);
+  const hastaStr = fechaLocal(hasta);
+  const rangoKey = `${desdeStr}|${hastaStr}`;
+  const turnosList = datos.lista;
+  const loading = datos.rango !== rangoKey;
+  const mostrarHuecos = vista !== 'mes';
 
   useEffect(() => {
     let active = true;
-    const dates = getWeekDates(baseDate);
-    const params = new URLSearchParams({ idProfesional: user.idProfesional,
-      fechaDesde: fechaLocal(dates[0]), fechaHasta: fechaLocal(dates[6]) });
+    const params = new URLSearchParams({ idProfesional: user.idProfesional, fechaDesde: desdeStr, fechaHasta: hastaStr });
+    const rango = `${desdeStr}|${hastaStr}`;
     turnos.getAll(params.toString())
-      .then((data) => { if (active) setTurnosList(Array.isArray(data) ? data : []); })
-      .catch(() => { if (active) setTurnosList([]); })
-      .finally(() => { if (active) setLoading(false); });
+      .then((data) => { if (active) setDatos({ rango, lista: Array.isArray(data) ? data : [] }); })
+      .catch(() => { if (active) setDatos({ rango, lista: [] }); });
     return () => { active = false; };
-  }, [baseDate, user.idProfesional]);
+  }, [desdeStr, hastaStr, user.idProfesional, recarga]);
 
-  const desdeSemana = fechaLocal(weekDates[0]);
-  const hastaSemana = fechaLocal(weekDates[6]);
-  // Se recalculan cada vez que cambia la semana o los turnos (reserva, cancelación, reprogramación)
+  // Se recalculan cada vez que cambia el rango o los turnos (reserva, cancelación, reprogramación)
   useEffect(() => {
+    if (!mostrarHuecos) return undefined;
     let active = true;
-    huecosApi.get(user.idProfesional, desdeSemana, hastaSemana)
-      .then((data) => { if (active) setHuecosSemana(data); })
-      .catch(() => { if (active) setHuecosSemana(null); });
+    const rango = `${desdeStr}|${hastaStr}`;
+    huecosApi.get(user.idProfesional, desdeStr, hastaStr)
+      .then((data) => { if (active) setHuecosRango({ rango, data }); })
+      .catch(() => { if (active) setHuecosRango(null); });
     return () => { active = false; };
-  }, [user.idProfesional, desdeSemana, hastaSemana, turnosList]);
+  }, [user.idProfesional, desdeStr, hastaStr, mostrarHuecos, turnosList]);
 
-  function prevWeek() {
-    const d = new Date(baseDate);
-    d.setDate(d.getDate() - 7);
-    setBaseDate(d);
+  const huecosSemana = mostrarHuecos && huecosRango?.rango === rangoKey ? huecosRango.data : null;
+
+  function cambiarVista(nueva) {
+    setVista(nueva);
+    try { localStorage.setItem(CLAVE_VISTA, nueva); } catch { /* sin almacenamiento: no se recuerda la vista */ }
   }
 
-  function nextWeek() {
-    const d = new Date(baseDate);
-    d.setDate(d.getDate() + 7);
-    setBaseDate(d);
+  function mover(direccion) {
+    setBaseDate((actual) => moverFecha(vista, actual, direccion));
   }
 
   function goToday() {
     setBaseDate(new Date());
-    setDiaSeleccionado(indiceEnSemana(new Date()));
+  }
+
+  function abrirDia(fecha) {
+    setBaseDate(fecha);
+    cambiarVista('dia');
   }
 
   // Selector de día (celular): flechas para moverse, Inicio/Fin para ir al lunes/domingo
@@ -115,7 +118,7 @@ export default function Agenda() {
     if (!(e.key in destinos)) return;
     e.preventDefault();
     const nuevo = Math.min(6, Math.max(0, destinos[e.key]));
-    setDiaSeleccionado(nuevo);
+    setBaseDate(weekDates[nuevo]);
     document.getElementById(`agenda-dia-${nuevo}`)?.focus();
   }
 
@@ -144,11 +147,9 @@ export default function Agenda() {
     try {
       await turnos.update({ idTurno: selectedTurno.idTurno, accion: 'reprogramar',
         fecha: fechaNueva, horaInicio: horaNueva });
-      // Se muestra la semana del nuevo horario para que el cambio quede a la vista
+      // Se muestra el día del nuevo horario para que el cambio quede a la vista
       const [anio, mes, dia] = fechaNueva.split('-').map(Number);
-      const destino = new Date(anio, mes - 1, dia);
-      setBaseDate(destino);
-      setDiaSeleccionado(indiceEnSemana(destino));
+      setBaseDate(new Date(anio, mes - 1, dia));
       setAviso(`Turno reprogramado para el ${dia}/${mes} a las ${horaNueva}.`);
       cerrarDetalle();
     } catch (err) {
@@ -169,25 +170,120 @@ export default function Agenda() {
       }
       await turnos.update(payload);
       cerrarDetalle();
-      fetchTurnos();
+      setRecarga((n) => n + 1);
     } catch (err) {
       alert(err.message || 'Error al actualizar el turno.');
     }
   }
 
   const hoy = fechaLocal(new Date());
-  const totalSemana = turnosList.length;
-  const confirmados = turnosList.filter((t) => String(t.estado).toLowerCase() === 'confirmado').length;
+  const baseStr = fechaLocal(baseDate);
+  // Turnos que cuentan en el resumen: los del día, la semana o el mes mostrado (sin los días de relleno de la grilla)
+  const turnosVista = vista === 'mes' ? turnosList.filter((t) => t.fecha.slice(0, 7) === baseStr.slice(0, 7)) : turnosList;
+  const totalVista = turnosVista.length;
+  const confirmados = turnosVista.filter((t) => String(t.estado).toLowerCase() === 'confirmado').length;
+
+  const titulos = {
+    dia: { h2: 'Agenda del día', texto: 'Cada franja horaria con sus turnos y los espacios libres.' },
+    semana: { h2: 'Semana de trabajo', texto: 'Revisá tus próximas atenciones y gestioná cada turno desde un solo lugar.' },
+    mes: { h2: 'Agenda del mes', texto: 'La carga de cada día de un vistazo. Tocá un día para ver su detalle.' },
+  }[vista];
+  const esHoyBase = baseStr === hoy;
+  const etiquetaToolbar = {
+    dia: { kicker: esHoyBase ? 'HOY' : 'DÍA', titulo: mayuscula(`${DIAS_LARGOS[baseDate.getDay()]} ${baseDate.getDate()} de ${MESES[baseDate.getMonth()]}`) },
+    semana: { kicker: weekDates.some((d) => fechaLocal(d) === hoy) ? 'SEMANA ACTUAL' : 'SEMANA', titulo: `${formatDateShort(weekDates[0])} — ${formatDateShort(weekDates[6])}` },
+    mes: { kicker: baseDate.getMonth() === new Date().getMonth() && baseDate.getFullYear() === new Date().getFullYear() ? 'MES ACTUAL' : 'MES', titulo: mayuscula(MESES[baseDate.getMonth()]) },
+  }[vista];
+  const unidad = { dia: 'día', semana: 'semana', mes: 'mes' }[vista];
+
+  function renderDia() {
+    const turnosDia = getTurnosByDate(baseStr).sort((a, b) => minutosDeHora(a.horaInicio) - minutosDeHora(b.horaInicio));
+    const huecosDia = huecosSemana?.dias.find((d) => d.fecha === baseStr)?.huecos || [];
+    const items = [
+      ...turnosDia.map((t) => ({ tipo: 'turno', ini: minutosDeHora(t.horaInicio), fin: minutosDeHora(t.horaFin), turno: t })),
+      ...huecosDia.map((h) => ({ tipo: 'hueco', ini: minutosDeHora(h.horaInicio), fin: minutosDeHora(h.horaFin), hueco: h })),
+    ];
+    if (items.length === 0) {
+      return <div className="agenda-day-empty agenda-dia-vacio"><i className="far fa-calendar" /><span>Sin turnos ni horarios de atención este día</span></div>;
+    }
+    const primera = Math.floor(Math.min(...items.map((i) => i.ini)) / 60);
+    const ultima = Math.max(primera + 1, Math.ceil(Math.max(...items.map((i) => i.fin)) / 60));
+    const franjas = [];
+    for (let hora = primera; hora < ultima; hora += 1) {
+      // Lo que empezó en una franja anterior y sigue en curso al comenzar esta (un hueco largo o un turno de más de una hora)
+      const continua = items.filter((i) => i.ini < hora * 60 && i.fin > hora * 60).sort((a, b) => b.fin - a.fin)[0];
+      franjas.push({ hora, continua, items: items.filter((i) => Math.floor(i.ini / 60) === hora).sort((a, b) => a.ini - b.ini) });
+    }
+    return (
+      <ol className="agenda-dia-franjas" aria-label={`Franjas horarias del ${baseDate.getDate()} de ${MESES[baseDate.getMonth()]}`}>
+        {franjas.map((franja) => (
+          <li key={franja.hora} className={`agenda-franja ${franja.items.length === 0 && !franja.continua ? 'is-libre' : ''}`}>
+            <time>{String(franja.hora).padStart(2, '0')}:00</time>
+            <div className="agenda-franja-items">
+              {franja.items.length === 0 && franja.continua && (
+                <div className={`agenda-franja-continua ${franja.continua.tipo === 'hueco' ? 'is-hueco' : 'is-turno'}`}>
+                  {franja.continua.tipo === 'hueco'
+                    ? `Libre hasta las ${franja.continua.hueco.horaFin}`
+                    : `En curso hasta las ${horaCorta(franja.continua.turno.horaFin)} · ${nombreCliente(franja.continua.turno)}`}
+                </div>
+              )}
+              {franja.items.map((item) => item.tipo === 'turno' ? (
+                <button key={`t${item.turno.idTurno}`} type="button" className={`modern-calendar-event agenda-franja-turno ${(item.turno.estado || '').toLowerCase()}`} onClick={() => setSelectedTurno(item.turno)}>
+                  <time>{horaCorta(item.turno.horaInicio)} – {horaCorta(item.turno.horaFin)}</time>
+                  <strong>{nombreCliente(item.turno)}</strong>
+                  <span>{item.turno.servicio_nombre || item.turno.nombreServicio || item.turno.servicio || 'Servicio'}</span>
+                  <em className={`badge badge-${(item.turno.estado || '').toLowerCase()}`}>{item.turno.estado}</em>
+                </button>
+              ) : (
+                <div key={`h${item.hueco.horaInicio}`} className={`agenda-franja-hueco ${item.hueco.aprovechable ? 'is-aprovechable' : 'is-muerto'}`}
+                  title={item.hueco.aprovechable ? 'Hueco libre: se puede reservar un servicio' : 'Hueco muy corto: no alcanza para ningún servicio'}>
+                  <i className={item.hueco.aprovechable ? 'far fa-clock' : 'fas fa-ban'} />
+                  <time>{item.hueco.horaInicio} – {item.hueco.horaFin}</time>
+                  <small>{duracionTexto(item.hueco.duracionMin)}{item.hueco.aprovechable ? ' libres' : ' · corto'}</small>
+                </div>
+              ))}
+            </div>
+          </li>
+        ))}
+      </ol>
+    );
+  }
+
+  function renderMes() {
+    const porDia = new Map();
+    turnosList.forEach((t) => porDia.set(t.fecha, (porDia.get(t.fecha) || 0) + 1));
+    return (
+      <section className="agenda-mes" aria-label={`Calendario de ${MESES[baseDate.getMonth()]} de ${baseDate.getFullYear()}`}>
+        <div className="agenda-mes-cabecera" aria-hidden="true">{ENCABEZADO_MES.map((dia) => <span key={dia}>{dia}</span>)}</div>
+        <div className="agenda-mes-grilla">
+          {cuadriculaMes(baseDate).map((fecha) => {
+            const fechaStr = fechaLocal(fecha);
+            const cantidad = porDia.get(fechaStr) || 0;
+            const nivel = cantidad >= 4 ? 3 : cantidad >= 2 ? 2 : cantidad === 1 ? 1 : 0;
+            const clases = ['agenda-mes-dia', `nivel-${nivel}`,
+              fecha.getMonth() !== baseDate.getMonth() && 'is-outside', fechaStr === hoy && 'is-today', fechaStr === baseStr && 'is-selected'].filter(Boolean).join(' ');
+            return (
+              <button key={fechaStr} type="button" className={clases} onClick={() => abrirDia(fecha)}
+                aria-label={`${fecha.getDate()} de ${MESES[fecha.getMonth()]}: ${textoTurnos(cantidad)}`}>
+                <strong>{fecha.getDate()}</strong>
+                {cantidad > 0 && <span className="agenda-mes-count"><b>{cantidad}</b><small>{cantidad === 1 ? 'turno' : 'turnos'}</small></span>}
+              </button>
+            );
+          })}
+        </div>
+      </section>
+    );
+  }
 
   return (
     <div className="agenda-page pro-module-page">
       <section className="module-hero agenda-module-hero">
         <div>
           <span className="module-kicker">AGENDA OPERATIVA</span>
-          <h2>Semana de trabajo</h2>
-          <p>Revisá tus próximas atenciones y gestioná cada turno desde un solo lugar.</p>
+          <h2>{titulos.h2}</h2>
+          <p>{titulos.texto}</p>
         </div>
-        <div className="agenda-hero-summary"><div><span>Turnos</span><strong>{totalSemana}</strong></div><div><span>Confirmados</span><strong>{confirmados}</strong></div></div>
+        <div className="agenda-hero-summary"><div><span>Turnos</span><strong>{totalVista}</strong></div><div><span>Confirmados</span><strong>{confirmados}</strong></div></div>
       </section>
 
       <div className="agenda-primary-actions">
@@ -201,50 +297,57 @@ export default function Agenda() {
       </p>}
 
       <section className="agenda-toolbar">
-        <div><span>SEMANA ACTUAL</span><h3>{formatDateShort(weekDates[0])} — {formatDateShort(weekDates[6])} <small>{weekDates[0].getFullYear()}</small></h3></div>
+        <div><span>{etiquetaToolbar.kicker}</span><h3>{etiquetaToolbar.titulo} <small>{vista === 'semana' ? weekDates[0].getFullYear() : baseDate.getFullYear()}</small></h3></div>
+        <div className="agenda-view-switch" role="group" aria-label="Vista de la agenda">
+          {VISTAS.map((v) => (
+            <button key={v.id} type="button" aria-pressed={vista === v.id} className={vista === v.id ? 'is-active' : ''} onClick={() => cambiarVista(v.id)}>{v.label}</button>
+          ))}
+        </div>
         <div className="calendar-nav">
-          <button onClick={prevWeek} title="Semana anterior"><i className="fas fa-chevron-left" /></button>
+          <button onClick={() => mover(-1)} title={`${mayuscula(unidad)} anterior`} aria-label={`${mayuscula(unidad)} anterior`}><i className="fas fa-chevron-left" /></button>
           <button onClick={goToday} className="calendar-today">Ir a hoy</button>
-          <button onClick={nextWeek} title="Semana siguiente"><i className="fas fa-chevron-right" /></button>
+          <button onClick={() => mover(1)} title={`${mayuscula(unidad)} siguiente`} aria-label={`${mayuscula(unidad)} siguiente`}><i className="fas fa-chevron-right" /></button>
         </div>
       </section>
 
       {huecosSemana && huecosSemana.resumen.cantidadHuecos > 0 && (
         <p className="agenda-huecos-resumen">
           <i className="far fa-clock" />
-          <span><strong>{duracionTexto(huecosSemana.resumen.minutosAprovechables)}</strong> libres para reservar esta semana
+          <span><strong>{duracionTexto(huecosSemana.resumen.minutosAprovechables)}</strong> libres para reservar {vista === 'dia' ? 'este día' : 'esta semana'}
             {huecosSemana.resumen.minutosMuertos > 0 && <> · {duracionTexto(huecosSemana.resumen.minutosMuertos)} en huecos muy cortos</>}</span>
         </p>
       )}
 
-      <div className="agenda-day-picker" role="tablist" aria-label="Día de la semana">
-        {weekDates.map((date, i) => {
-          const fechaStr = fechaLocal(date);
-          const cantidad = getTurnosByDate(fechaStr).length;
-          const seleccionado = i === diaSeleccionado;
-          return (
-            <button
-              key={fechaStr}
-              id={`agenda-dia-${i}`}
-              type="button"
-              role="tab"
-              aria-selected={seleccionado}
-              tabIndex={seleccionado ? 0 : -1}
-              className={`${seleccionado ? 'is-selected' : ''} ${fechaStr === hoy ? 'is-today' : ''}`}
-              onClick={() => setDiaSeleccionado(i)}
-              onKeyDown={handleDiaKeyDown}
-            >
-              <span>{DIAS_SEMANA[date.getDay()]}</span>
-              <strong>{date.getDate()}</strong>
-              <small>{cantidad > 0 ? cantidad : '·'}</small>
-            </button>
-          );
-        })}
-      </div>
+      {vista === 'semana' && (
+        <div className="agenda-day-picker" role="tablist" aria-label="Día de la semana">
+          {weekDates.map((date, i) => {
+            const fechaStr = fechaLocal(date);
+            const cantidad = getTurnosByDate(fechaStr).length;
+            const seleccionado = i === diaSeleccionado;
+            return (
+              <button
+                key={fechaStr}
+                id={`agenda-dia-${i}`}
+                type="button"
+                role="tab"
+                aria-selected={seleccionado}
+                tabIndex={seleccionado ? 0 : -1}
+                className={`${seleccionado ? 'is-selected' : ''} ${fechaStr === hoy ? 'is-today' : ''}`}
+                onClick={() => setBaseDate(date)}
+                onKeyDown={handleDiaKeyDown}
+              >
+                <span>{DIAS_SEMANA[date.getDay()]}</span>
+                <strong>{date.getDate()}</strong>
+                <small>{cantidad > 0 ? cantidad : '·'}</small>
+              </button>
+            );
+          })}
+        </div>
+      )}
 
       {loading ? (
         <div className="spinner"></div>
-      ) : (
+      ) : vista === 'dia' ? renderDia() : vista === 'mes' ? renderMes() : (
         <section className="modern-week-grid">
           {weekDates.map((date, i) => {
             const fechaStr = fechaLocal(date);
