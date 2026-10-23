@@ -34,6 +34,9 @@ export function normalizeReportStats(raw = {}) {
       fecha: String(item.fecha || ''),
       total: numberValue(item.total),
     })),
+    turnosPorHora: listValue(raw.turnosPorHora)
+      .map((item) => ({ hora: numberValue(item.hora), total: numberValue(item.total) }))
+      .filter((item) => item.hora >= 0 && item.hora <= 23),
     serviciosTop: listValue(raw.serviciosTop ?? raw.serviciosMasSolicitados).map((item) => ({
       idServicio: item.idServicio,
       nombre: item.nombre || item.servicio || 'Servicio',
@@ -43,3 +46,26 @@ export function normalizeReportStats(raw = {}) {
 }
 
 export const emptyReportStats = normalizeReportStats();
+
+export const horaLabel = (hora) => `${String(hora).padStart(2, '0')}:00`;
+export const franjaLabel = (hora) => `${horaLabel(hora)} a ${horaLabel((hora + 1) % 24)}`;
+
+// Serie continua desde la primera hasta la última hora con turnos (las horas sin turnos valen 0).
+export function buildHourSeries(turnosPorHora = []) {
+  if (turnosPorHora.length === 0) return [];
+  const porHora = new Map(turnosPorHora.map((item) => [item.hora, item.total]));
+  const horas = turnosPorHora.map((item) => item.hora);
+  const serie = [];
+  for (let hora = Math.min(...horas); hora <= Math.max(...horas); hora += 1) {
+    serie.push({ hora, total: porHora.get(hora) || 0 });
+  }
+  return serie;
+}
+
+// Las franjas más demandadas, de mayor a menor cantidad de turnos.
+export function topHorasPico(turnosPorHora = [], cantidad = 3) {
+  return [...turnosPorHora]
+    .filter((item) => item.total > 0)
+    .sort((a, b) => b.total - a.total || a.hora - b.hora)
+    .slice(0, cantidad);
+}

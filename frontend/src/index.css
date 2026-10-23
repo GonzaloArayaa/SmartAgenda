@@ -2453,3 +2453,20 @@ input, select, textarea { font-family: inherit; }
 [data-theme="dark"] .week-day-range+.week-day-range { border-color:#2d3a54; }
 @media(max-width:900px){ .week-day-row.has-ranges { grid-template-columns:1.2fr 3fr; gap:12px; } .week-day-range { grid-template-columns:1.2fr 100px 76px; gap:12px; } }
 @media(max-width:640px){ .pro-huecos-metricas { grid-template-columns:1fr; } .week-day-row.has-ranges { grid-template-columns:1fr; } .week-day-range { grid-template-columns:1fr auto; } .week-day-range .week-day-interval { display:none; } }
+
+/* Exportación de reportes y horas pico */
+.report-export-bar{display:flex;align-items:center;gap:18px;margin-bottom:18px;padding:14px 20px;border:1px solid #e4dcd3;border-radius:12px;background:#fffdfa}
+.report-export-title{display:flex;align-items:center;gap:10px;margin-right:auto}.report-export-title>i{display:grid;width:36px;height:36px;place-items:center;border-radius:9px;background:#fff0ea;color:#d65c40}
+.report-export-title span,.report-export-title strong{display:block}.report-export-title span{color:#d65c40;font-size:.55rem;font-weight:800;letter-spacing:.8px}.report-export-title strong{margin-top:3px;color:#354158;font-size:.74rem}
+.report-export-actions{display:flex;gap:10px}
+.report-export-btn{display:inline-flex;align-items:center;gap:8px;padding:10px 15px;border:1px solid transparent;border-radius:8px;font-size:.72rem;font-weight:800;cursor:pointer;transition:transform .15s,background .15s}
+.report-export-btn:hover:not(:disabled){transform:translateY(-1px)}.report-export-btn:disabled{opacity:.5;cursor:not-allowed}
+.report-export-pdf{background:#fdecea;border-color:#f3c6c1;color:#b23b2e}.report-export-pdf:hover:not(:disabled){background:#fadbd7}
+.report-export-excel{background:#e8f6ee;border-color:#bfe3cf;color:#237a4b}.report-export-excel:hover:not(:disabled){background:#d6eee0}
+.report-feedback-ok{border-color:#bfe3cf;background:#f0faf4;color:#237a4b}.report-feedback-ok>i{background:#d6eee0;color:#237a4b}
+.report-peak-summary{margin:0;padding:12px 22px 0;color:#566176;font-size:.74rem}.report-peak-summary>i{color:#e96c4d;margin-right:4px}.report-peak-summary strong{color:#d65c40}.report-peak-summary span{color:#8a93a2}
+[data-theme="dark"] .report-export-bar{background:#182238;border-color:#2d3a54}[data-theme="dark"] .report-export-title strong{color:#f3f5fb}
+[data-theme="dark"] .report-export-pdf{background:#3a2025;border-color:#5b2c33;color:#ff9d92}[data-theme="dark"] .report-export-excel{background:#17302a;border-color:#245043;color:#7fd5a6}
+[data-theme="dark"] .report-feedback-ok{background:#17302a;border-color:#245043;color:#7fd5a6}[data-theme="dark"] .report-feedback-ok>i{background:#1f4538}
+[data-theme="dark"] .report-peak-summary{color:#a9b4c8}
+@media(max-width:640px){.report-export-bar{align-items:stretch;flex-direction:column}.report-export-actions{display:grid;grid-template-columns:1fr 1fr}.report-export-btn{justify-content:center}}

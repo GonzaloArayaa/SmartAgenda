@@ -71,6 +71,8 @@ export const huecos = {
 export const reportes = {
   getEstadisticas: (params = '') => request(`reportes?tipo=general&${params}`),
   getRubros: () => request('reportes?tipo=rubros'),
+  registrarExportacion: (formato, fechaDesde, fechaHasta) =>
+    request('reportes/exportaciones', { method: 'POST', body: { formato, fechaDesde, fechaHasta } }),
 };
 
 export const usuarios = {
