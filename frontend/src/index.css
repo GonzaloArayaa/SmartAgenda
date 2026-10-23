@@ -2439,6 +2439,109 @@ input, select, textarea { font-family: inherit; }
 .week-day-range+.week-day-range { border-top:1px dashed #eee7e0; }
 .week-day-add-range { justify-self:start; margin:4px 0 2px; }
 
+/* Agenda: selector de vista (día / semana / mes), vista diaria y vista mensual */
+.agenda-toolbar { gap:14px; flex-wrap:wrap; }
+.agenda-toolbar>div:first-child { margin-right:auto; }
+.agenda-view-switch { display:inline-flex; padding:3px; border:1px solid #e2dad2; border-radius:10px; background:#f6f1ec; }
+.agenda-view-switch button { padding:7px 17px; border:0; border-radius:8px; background:transparent; color:#6b7587; font-size:.7rem; font-weight:800; cursor:pointer; transition:background .15s,color .15s; }
+.agenda-view-switch button:hover { color:#d65c40; }
+.agenda-view-switch button.is-active { background:#fff; color:#d65c40; box-shadow:0 1px 5px rgba(40,52,74,.15); }
+.agenda-view-switch button:focus-visible, .agenda-mes-dia:focus-visible { outline:2px solid #e96c4d; outline-offset:2px; }
+
+.agenda-dia-franjas { margin:0 0 18px; padding:6px 20px; border:1px solid #e4dcd3; border-radius:12px; background:#fffdfa; list-style:none; }
+.agenda-franja { display:grid; grid-template-columns:58px minmax(0,1fr); gap:14px; padding:12px 0; border-top:1px solid #efe8e1; }
+.agenda-franja:first-child { border-top:0; }
+.agenda-franja>time { padding-top:7px; color:#8992a1; font-size:.74rem; font-weight:800; }
+.agenda-franja-items { display:grid; gap:8px; min-height:30px; align-content:start; }
+.agenda-franja.is-libre .agenda-franja-items { border-radius:8px; background:repeating-linear-gradient(135deg,transparent 0 7px,rgba(0,0,0,.025) 7px 14px); }
+.agenda-franja-turno { display:grid; grid-template-columns:auto minmax(0,1.4fr) minmax(0,1fr) auto; align-items:center; gap:12px; }
+.agenda-franja-turno time, .agenda-franja-turno strong, .agenda-franja-turno span { margin:0; }
+.agenda-franja-turno em { padding:3px 9px; border-radius:999px; font-size:.58rem; font-style:normal; font-weight:800; text-transform:capitalize; }
+.agenda-franja-hueco { display:flex; align-items:center; gap:9px; padding:7px 11px; border:1px dashed #b9d9c7; border-radius:8px; background:#f6fbf8; color:#367c5d; font-size:.68rem; }
+.agenda-franja-hueco time { font-weight:800; }
+.agenda-franja-hueco small { margin-left:auto; color:#6f9a84; font-size:.6rem; }
+.agenda-franja-hueco.is-muerto { border-color:#ddd5cc; background:#f6f3ef; color:#8a93a2; }
+.agenda-franja-hueco.is-muerto small { color:#9aa1ad; }
+.agenda-franja-continua { display:flex; align-items:center; min-height:30px; padding:6px 11px; border-radius:8px; font-size:.66rem; font-weight:700; }
+.agenda-franja-continua.is-hueco { border:1px dashed #cce1d6; background:#f1f8f4; color:#4b8a6d; }
+.agenda-franja-continua.is-turno { background:#f3f0ec; color:#8a93a2; }
+.agenda-dia-vacio { min-height:150px; margin-bottom:18px; border:1px dashed #ddd5cc; border-radius:12px; }
+
+.agenda-mes { margin-bottom:18px; padding:14px; border:1px solid #e4dcd3; border-radius:12px; background:#fffdfa; }
+.agenda-mes-cabecera, .agenda-mes-grilla { display:grid; grid-template-columns:repeat(7,minmax(0,1fr)); gap:6px; }
+.agenda-mes-cabecera { margin-bottom:6px; }
+.agenda-mes-cabecera span { padding:4px 0; color:#8992a1; font-size:.62rem; font-weight:800; letter-spacing:.6px; text-align:center; text-transform:uppercase; }
+.agenda-mes-dia { position:relative; display:flex; min-height:84px; flex-direction:column; align-items:flex-start; justify-content:space-between; gap:6px; padding:9px 10px; border:1px solid #ece4dc; border-radius:10px; background:#fff; color:#2b374d; text-align:left; cursor:pointer; transition:transform .12s,box-shadow .12s,border-color .12s; }
+.agenda-mes-dia:hover { border-color:#df9e8a; transform:translateY(-1px); box-shadow:0 6px 14px rgba(56,41,29,.08); }
+.agenda-mes-dia>strong { font-size:.8rem; }
+.agenda-mes-dia.is-outside { background:#faf7f3; color:#aab1bd; }
+.agenda-mes-dia.is-today { border-color:#e96c4d; }
+.agenda-mes-dia.is-today>strong { display:grid; width:24px; height:24px; place-items:center; border-radius:50%; background:#e96c4d; color:#fff; }
+.agenda-mes-dia.is-selected { box-shadow:0 0 0 2px #667b9f; }
+.agenda-mes-dia.nivel-1 { background:#fff6f1; }
+.agenda-mes-dia.nivel-2 { background:#ffe9de; }
+.agenda-mes-dia.nivel-3 { background:#ffd9c7; }
+.agenda-mes-dia.is-outside.nivel-1, .agenda-mes-dia.is-outside.nivel-2, .agenda-mes-dia.is-outside.nivel-3 { background:#faf2ec; }
+.agenda-mes-count { display:flex; align-items:baseline; gap:4px; color:#d65c40; }
+.agenda-mes-count b { font-size:1rem; line-height:1; }
+.agenda-mes-count small { font-size:.58rem; font-weight:700; }
+
+/* Reservar: filtros y orden de los servicios */
+.booking-filters { display:flex; flex-wrap:wrap; align-items:flex-end; gap:12px; margin:0 0 16px; padding:13px 15px; border:1px solid #eadfd5; border-radius:11px; background:#faf6f1; }
+.booking-filters label { display:grid; gap:5px; color:#7d8797; font-size:.58rem; font-weight:800; letter-spacing:.6px; text-transform:uppercase; }
+.booking-filters input, .booking-filters select { min-width:150px; padding:8px 10px; border:1px solid #e0d8d0; border-radius:8px; background:#fff; color:#2b374d; font:inherit; font-size:.74rem; font-weight:600; letter-spacing:0; text-transform:none; }
+.booking-filters input:focus-visible, .booking-filters select:focus-visible { outline:2px solid #e96c4d; outline-offset:1px; }
+.booking-filter-money { position:relative; }
+.booking-filter-money span { position:absolute; bottom:8px; left:10px; color:#8992a1; font-size:.74rem; font-weight:700; letter-spacing:0; }
+.booking-filter-money input { padding-left:22px; }
+.booking-filters-summary { margin-left:auto; color:#7d8797; font-size:.68rem; }
+.booking-filters-summary strong { color:#2b374d; }
+.booking-filters-clear { padding:8px 12px; border:1px solid #e0b8ab; border-radius:8px; background:transparent; color:#d65c40; font-size:.68rem; font-weight:800; cursor:pointer; }
+.booking-filters-clear:hover { background:#fff0ea; }
+.booking-filter-empty { padding:34px 20px; border:1px dashed #ddd5cc; border-radius:12px; color:#7d8797; text-align:center; }
+.booking-filter-empty i { margin-bottom:10px; color:#d66a4d; font-size:1.3rem; }
+.booking-filter-empty h3 { margin:0 0 4px; color:#2b374d; font-size:.9rem; }
+.booking-filter-empty p { margin:0 0 14px; font-size:.74rem; }
+
+[data-theme="dark"] .agenda-view-switch { border-color:#334159; background:#111a2b; }
+[data-theme="dark"] .agenda-view-switch button { color:#8f9db3; }
+[data-theme="dark"] .agenda-view-switch button.is-active { background:#26334f; color:#ff9a5c; box-shadow:none; }
+[data-theme="dark"] .agenda-dia-franjas, [data-theme="dark"] .agenda-mes { border-color:#2d3a54; background:#182238; }
+[data-theme="dark"] .agenda-franja { border-color:#2d3a54; }
+[data-theme="dark"] .agenda-franja>time, [data-theme="dark"] .agenda-mes-cabecera span { color:#8f9db3; }
+[data-theme="dark"] .agenda-franja.is-libre .agenda-franja-items { background:repeating-linear-gradient(135deg,transparent 0 7px,rgba(255,255,255,.03) 7px 14px); }
+[data-theme="dark"] .agenda-franja-hueco { border-color:#2b5a45; background:#14251f; color:#6fd1a0; }
+[data-theme="dark"] .agenda-franja-hueco small { color:#5fae8a; }
+[data-theme="dark"] .agenda-franja-hueco.is-muerto { border-color:#334159; background:#182238; color:#8f9db3; }
+[data-theme="dark"] .agenda-dia-vacio { border-color:#334159; }
+[data-theme="dark"] .agenda-franja-continua.is-hueco { border-color:#2b5a45; background:#14251f; color:#6fd1a0; }
+[data-theme="dark"] .agenda-franja-continua.is-turno { background:#1d2940; color:#8f9db3; }
+[data-theme="dark"] .agenda-mes-dia { border-color:#2d3a54; background:#111a2b; color:#dce2ee; }
+[data-theme="dark"] .agenda-mes-dia:hover { border-color:#ff9a5c; box-shadow:none; }
+[data-theme="dark"] .agenda-mes-dia.is-outside { background:#141d30; color:#566178; }
+[data-theme="dark"] .agenda-mes-dia.nivel-1 { background:#2a2230; }
+[data-theme="dark"] .agenda-mes-dia.nivel-2 { background:#3a2a31; }
+[data-theme="dark"] .agenda-mes-dia.nivel-3 { background:#4d3033; }
+[data-theme="dark"] .agenda-mes-dia.is-outside.nivel-1, [data-theme="dark"] .agenda-mes-dia.is-outside.nivel-2, [data-theme="dark"] .agenda-mes-dia.is-outside.nivel-3 { background:#1c2236; }
+[data-theme="dark"] .agenda-mes-dia.is-selected { box-shadow:0 0 0 2px #8da3c7; }
+[data-theme="dark"] .agenda-mes-count { color:#ff9a5c; }
+[data-theme="dark"] .booking-filters { border-color:#2d3a54; background:#111a2b; }
+[data-theme="dark"] .booking-filters input, [data-theme="dark"] .booking-filters select { border-color:#334159; background:#182238; color:#dce2ee; }
+[data-theme="dark"] .booking-filters-summary strong, [data-theme="dark"] .booking-filter-empty h3 { color:#f3f5fb; }
+[data-theme="dark"] .booking-filters-clear { border-color:#6b3d36; color:#ff9a5c; }
+[data-theme="dark"] .booking-filters-clear:hover { background:#2a2230; }
+[data-theme="dark"] .booking-filter-empty { border-color:#334159; }
+
+@media(max-width:640px){
+  .agenda-view-switch { width:100%; } .agenda-view-switch button { flex:1; }
+  .agenda-franja { grid-template-columns:44px minmax(0,1fr); gap:9px; }
+  .agenda-franja-turno { grid-template-columns:minmax(0,1fr) auto; gap:4px 10px; }
+  .agenda-franja-turno time, .agenda-franja-turno strong { grid-column:1; } .agenda-franja-turno span { grid-column:1; } .agenda-franja-turno em { grid-column:2; grid-row:1; }
+  .agenda-mes { padding:8px; } .agenda-mes-cabecera, .agenda-mes-grilla { gap:3px; }
+  .agenda-mes-dia { min-height:58px; padding:6px 5px; border-radius:8px; } .agenda-mes-dia>strong { font-size:.72rem; } .agenda-mes-count small { display:none; } .agenda-mes-count b { font-size:.82rem; }
+  .booking-filters { align-items:stretch; flex-direction:column; } .booking-filters input, .booking-filters select { width:100%; } .booking-filters-summary { margin-left:0; }
+}
+
 [data-theme="dark"] .agenda-huecos-resumen { border-color:#2b5a45; background:#14251f; color:#6fd1a0; }
 [data-theme="dark"] .agenda-huecos-resumen strong { color:#8fe0b8; }
 [data-theme="dark"] .agenda-huecos li { border-color:#2b5a45; background:#14251f; color:#6fd1a0; }
