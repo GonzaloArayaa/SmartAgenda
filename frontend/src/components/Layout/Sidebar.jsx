@@ -1,6 +1,7 @@
 import { NavLink } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import SmartAgendaLogo, { resetLogoAnimation } from './SmartAgendaLogo';
+import Avatar from '../Avatar';
 
 export default function Sidebar() {
   const { user, logout } = useAuth();
@@ -33,7 +34,6 @@ export default function Sidebar() {
   };
 
   const items = menuItems[rol] || [];
-  const initials = user ? (user.nombre[0] + user.apellido[0]).toUpperCase() : '?';
 
   function handleLogout() {
     // Al volver a iniciar sesión el logo repite su secuencia de entrada.
@@ -63,7 +63,7 @@ export default function Sidebar() {
 
       <div className="sidebar-user">
         <div className="sidebar-user-main">
-          <div className="sidebar-avatar">{initials}</div>
+          <Avatar className="sidebar-avatar" idUsuario={user?.idUsuario} fotoVersion={user?.fotoVersion} nombre={user?.nombre} apellido={user?.apellido} />
           <div className="sidebar-user-info">
             <p>{user?.nombre} {user?.apellido}</p>
             <span className="sidebar-role-pill"><i className="fas fa-circle" /> {rol}</span>

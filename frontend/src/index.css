@@ -2399,6 +2399,76 @@ input, select, textarea { font-family: inherit; }
 .agenda-aviso { display:flex; align-items:center; gap:9px; }
 .agenda-aviso button { margin-left:auto; border:0; background:transparent; color:inherit; cursor:pointer; }
 
+/* Foto de perfil, búsqueda de profesionales (localidad y disponibilidad) y cambio de rol */
+.avatar-img { display:block; width:100%; height:100%; border-radius:inherit; object-fit:cover; }
+.has-photo { overflow:hidden; padding:0; }
+
+.profile-photo-actions { display:flex; flex-wrap:wrap; align-items:center; justify-content:center; gap:7px 8px; margin:0 0 12px; }
+.profile-photo-actions small { flex-basis:100%; color:#8992a1; font-size:.58rem; text-align:center; }
+.profile-photo-btn, .profile-photo-remove { padding:7px 12px; border:1px solid #e0b8ab; border-radius:8px; background:#fff; color:#d65c40; font-size:.66rem; font-weight:800; cursor:pointer; transition:background .15s; }
+.profile-photo-btn:hover:not(:disabled) { background:#fff0ea; }
+.profile-photo-remove { border-color:#e2dad2; color:#6e7889; }
+.profile-photo-remove:hover:not(:disabled) { background:#f4f1ed; }
+.profile-photo-btn:disabled, .profile-photo-remove:disabled { opacity:.55; cursor:wait; }
+.profile-photo-btn:focus-visible, .profile-photo-remove:focus-visible { outline:2px solid #e96c4d; outline-offset:2px; }
+.profile-photo-error { margin:0 0 12px; padding:8px 10px; border:1px solid #edc9c6; border-radius:8px; background:#fff4f2; color:#a54d45; font-size:.64rem; line-height:1.4; }
+
+.discovery-search-panel { grid-template-columns:repeat(4,minmax(0,1fr)); }
+.discovery-search-panel .discovery-search-input { grid-column:1/-1; }
+.discovery-filter select, .discovery-filter input { min-width:0; }
+.discovery-filter-date input { width:100%; height:40px; border:0; outline:0; background:transparent; color:#334057; font-size:.72rem; }
+.discovery-hint { margin:-6px 0 14px; color:#7d8797; font-size:.7rem; }
+.discovery-hint i { margin-right:5px; color:#d66a4d; }
+.professional-card-top { gap:10px; }
+.professional-available { display:inline-flex; align-items:center; gap:4px; max-width:68%; text-align:right; line-height:1.35; }
+.professional-available.is-pronto { color:#b7791f; }
+.professional-available.is-sin-lugar { color:#8992a1; }
+.professional-location { display:block; margin:0 0 6px; color:#667b9f; font-size:.62rem; font-weight:700; }
+.professional-location i { margin-right:4px; color:#d66a4d; }
+
+.users-row { grid-template-columns:42px 1fr 100px 112px 112px; }
+.users-row>button.change-role { border-color:#d9d2ea; background:#f6f4fb; color:#5a4ea0; }
+.users-row>button.change-role:hover:not(:disabled) { border-color:#b9aedc; background:#ece8f8; }
+
+.role-modal { max-width:470px; }
+.role-modal-body { display:grid; gap:14px; padding:6px 0 4px; }
+.role-modal-person { display:grid; gap:2px; margin:0; }
+.role-modal-person strong { color:#27344b; font-size:.9rem; }
+.role-modal-person span { color:#8992a1; font-size:.7rem; }
+.role-modal-change { display:flex; align-items:center; gap:10px; }
+.role-modal-change>i { color:#d66a4d; }
+.role-modal-current { padding:8px 13px; border-radius:8px; background:#f1ede8; color:#6e7889; font-size:.74rem; font-weight:800; }
+.role-modal-change select, .role-modal-fields input, .role-modal-fields select { padding:9px 11px; border:1px solid #e0d8d0; border-radius:8px; background:#fff; color:#2b374d; font:inherit; font-size:.76rem; font-weight:600; }
+.role-modal-change select { flex:1; }
+.role-modal-fields { display:grid; gap:10px; padding:13px; border:1px solid #eadfd5; border-radius:10px; background:#faf6f1; }
+.role-modal-fields>p { margin:0; color:#7d6a58; font-size:.68rem; line-height:1.45; }
+.role-modal-fields>p i { margin-right:5px; color:#d66a4d; }
+.role-modal-fields label { display:grid; gap:4px; color:#7d8797; font-size:.58rem; font-weight:800; letter-spacing:.6px; text-transform:uppercase; }
+.role-modal-warning { margin:0; padding:10px 12px; border-radius:8px; background:#fff8e6; color:#8a6516; font-size:.66rem; line-height:1.45; }
+.role-modal-warning i { margin-right:5px; }
+.role-modal select:focus-visible, .role-modal input:focus-visible { outline:2px solid #e96c4d; outline-offset:1px; }
+
+[data-theme="dark"] .profile-photo-btn, [data-theme="dark"] .profile-photo-remove { border-color:#6b3d36; background:#111a2b; color:#ff9a5c; }
+[data-theme="dark"] .profile-photo-remove { border-color:#334159; color:#aab6c9; }
+[data-theme="dark"] .profile-photo-btn:hover:not(:disabled), [data-theme="dark"] .profile-photo-remove:hover:not(:disabled) { background:#26334f; }
+[data-theme="dark"] .profile-photo-actions small { color:#8f9db3; }
+[data-theme="dark"] .profile-photo-error { border-color:#6b3d36; background:#2a1d22; color:#ff9d92; }
+[data-theme="dark"] .discovery-filter-date input { color:#dce2ee; }
+[data-theme="dark"] .professional-available.is-pronto { color:#e0b25a; }
+[data-theme="dark"] .professional-available.is-sin-lugar { color:#8f9db3; }
+[data-theme="dark"] .professional-location { color:#8da3c7; }
+[data-theme="dark"] .users-row>button.change-role { border-color:#3d3a66; background:#1d1f3a; color:#b3a8f0; }
+[data-theme="dark"] .users-row>button.change-role:hover:not(:disabled) { background:#26294d; }
+[data-theme="dark"] .role-modal-person strong { color:#f3f5fb; }
+[data-theme="dark"] .role-modal-current { background:#111a2b; color:#aab6c9; }
+[data-theme="dark"] .role-modal-change select, [data-theme="dark"] .role-modal-fields input, [data-theme="dark"] .role-modal-fields select { border-color:#334159; background:#111a2b; color:#dce2ee; }
+[data-theme="dark"] .role-modal-fields { border-color:#2d3a54; background:#111a2b; }
+[data-theme="dark"] .role-modal-fields>p { color:#aab6c9; }
+[data-theme="dark"] .role-modal-warning { background:#2d2616; color:#e0c07a; }
+
+@media(max-width:900px){ .discovery-search-panel { grid-template-columns:repeat(2,minmax(0,1fr)); } .users-row>button.change-role { grid-column:2/-1; } }
+@media(max-width:640px){ .discovery-search-panel { grid-template-columns:1fr; } .professional-available { max-width:60%; } }
+
 /* Estado vacío de las pantallas del cliente en modo oscuro (Lista de Espera, Mis Turnos, Buscar) */
 [data-theme="dark"] .client-empty-state { border-color:#334159; background:#182238; }
 [data-theme="dark"] .client-empty-state>div { background:#26334f; color:#ff9a5c; }

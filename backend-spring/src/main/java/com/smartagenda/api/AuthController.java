@@ -14,18 +14,20 @@ import org.springframework.transaction.annotation.Transactional;
 public class AuthController {
   private final JdbcTemplate jdbc;
   private final BCryptPasswordEncoder passwords = new BCryptPasswordEncoder();
-  public AuthController(JdbcTemplate jdbc) { this.jdbc = jdbc; }
+  private final SesionesActivas sesiones;
+  public AuthController(JdbcTemplate jdbc, SesionesActivas sesiones) { this.jdbc = jdbc; this.sesiones = sesiones; }
 
   @PostMapping("/login") public Map<String,Object> login(@RequestBody Map<String,Object> body, HttpSession session) {
     String email = text(body,"email"), password = text(body,"contrasena");
     if (email.isBlank() || password.isBlank()) throw new ApiException(HttpStatus.BAD_REQUEST,"Email y contraseña son requeridos");
     Map<String,Object> dbUser;
-    try { dbUser = jdbc.queryForMap("SELECT u.idUsuario,u.nombre,u.apellido,u.email,u.contrasena,u.telefono,u.estado,r.nombreRol rol,p.idProfesional,p.nombreNegocio FROM usuario u JOIN rol r ON u.idRol=r.idRol LEFT JOIN profesional p ON p.idUsuario=u.idUsuario WHERE u.email=?",email); }
+    try { dbUser = jdbc.queryForMap("SELECT u.idUsuario,u.nombre,u.apellido,u.email,u.contrasena,u.telefono,u.estado,r.nombreRol rol,p.idProfesional,p.nombreNegocio,p.localidad,(SELECT f.version FROM foto_perfil f WHERE f.idUsuario=u.idUsuario) fotoVersion FROM usuario u JOIN rol r ON u.idRol=r.idRol LEFT JOIN profesional p ON p.idUsuario=u.idUsuario WHERE u.email=?",email); }
     catch (org.springframework.dao.EmptyResultDataAccessException e) { throw new ApiException(HttpStatus.UNAUTHORIZED,"Credenciales incorrectas"); }
     if (!"activo".equals(dbUser.get("estado"))) throw new ApiException(HttpStatus.FORBIDDEN,"Cuenta deshabilitada. Contacte al administrador.");
     String hash = String.valueOf(dbUser.get("contrasena")).replace("$2y$", "$2a$");
     if (!passwords.matches(password,hash)) throw new ApiException(HttpStatus.UNAUTHORIZED,"Credenciales incorrectas");
     dbUser.remove("contrasena"); session.setAttribute("user",dbUser);
+    sesiones.registrar(((Number) dbUser.get("idUsuario")).intValue(), session);
     return Map.of("message","Inicio de sesión exitoso","user",dbUser);
   }
 
@@ -35,11 +37,12 @@ public class AuthController {
     if(nombre.isBlank()||apellido.isBlank()||email.isBlank()||pass.isBlank()) throw new ApiException(HttpStatus.BAD_REQUEST,"Todos los campos obligatorios deben completarse");
     if(pass.length()<6) throw new ApiException(HttpStatus.BAD_REQUEST,"La contraseña debe tener al menos 6 caracteres");
     if(!"Cliente".equals(rol) && !"Profesional".equals(rol)) throw new ApiException(HttpStatus.BAD_REQUEST,"Rol no válido");
-    String negocio = "";
+    String negocio = "", localidad = null;
     Integer rubro = null;
     if("Profesional".equals(rol)) {
       negocio = text(body,"nombreNegocio");
       if(negocio.isBlank()) throw new ApiException(HttpStatus.BAD_REQUEST,"El nombre del negocio es obligatorio");
+      localidad = ProfesionalController.localidadValida(body, true);
       try { rubro = number(body,"idRubro",0); }
       catch(NumberFormatException e) { throw new ApiException(HttpStatus.BAD_REQUEST,"Rubro no válido"); }
       if(rubro <= 0 || jdbc.queryForObject("SELECT COUNT(*) FROM rubro WHERE idRubro=? AND estado='activo'",Integer.class,rubro)==0)
@@ -49,7 +52,7 @@ public class AuthController {
     Integer rolId; try { rolId=jdbc.queryForObject("SELECT idRol FROM rol WHERE nombreRol=?",Integer.class,rol); } catch(org.springframework.dao.EmptyResultDataAccessException e) { throw new ApiException(HttpStatus.BAD_REQUEST,"Rol no válido"); }
     jdbc.update("INSERT INTO usuario(nombre,apellido,email,contrasena,telefono,idRol) VALUES(?,?,?,?,?,?)",nombre,apellido,email,passwords.encode(pass),telefono,rolId);
     Integer id=jdbc.queryForObject("SELECT idUsuario FROM usuario WHERE email=?",Integer.class,email);
-    if("Profesional".equals(rol)) jdbc.update("INSERT INTO profesional(nombreNegocio,descripcion,idRubro,idUsuario) VALUES(?,?,?,?)",negocio,text(body,"descripcion"),rubro,id);
+    if("Profesional".equals(rol)) jdbc.update("INSERT INTO profesional(nombreNegocio,descripcion,localidad,idRubro,idUsuario) VALUES(?,?,?,?,?)",negocio,text(body,"descripcion"),localidad,rubro,id);
     return Map.of("message","Registro exitoso","idUsuario",id);
   }
   @PostMapping("/logout") public Map<String,String> logout(HttpSession s) { s.invalidate(); return Map.of("message","Sesión cerrada correctamente"); }
