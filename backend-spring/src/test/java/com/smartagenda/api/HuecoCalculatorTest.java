@@ -135,4 +135,33 @@ class HuecoCalculatorTest {
         List.of(turno(23, 0, 23, 30)), null, 30);
     assertEquals(List.of(new Hueco(h(22, 0), h(23, 0), true), new Hueco(h(23, 30), h(23, 59), false)), huecos);
   }
+
+  // ---- primerHorario: primer lugar real que puede reservar un cliente ----
+
+  @Test
+  void primerHorarioEsElInicioDelHuecoSiCaeEnLaGrilla() {
+    Rango r = rango(9, 0, 13, 0, 30);
+    assertEquals(h(10, 0), HuecoCalculator.primerHorario(List.of(r), new Hueco(h(10, 0), h(11, 0), true), 30));
+  }
+
+  @Test
+  void primerHorarioSaltaALaSiguienteMarcaDeLaGrilla() {
+    // el hueco arranca a las 08:50 (turno de 20 min) pero los turnos salen cada 30 min: el primer lugar es 09:00
+    Rango r = rango(8, 0, 12, 0, 30);
+    assertEquals(h(9, 0), HuecoCalculator.primerHorario(List.of(r), new Hueco(h(8, 50), h(10, 0), true), 30));
+  }
+
+  @Test
+  void primerHorarioEsNuloSiElServicioNoEntra() {
+    Rango r = rango(8, 0, 12, 0, 30);
+    assertEquals(null, HuecoCalculator.primerHorario(List.of(r), new Hueco(h(8, 50), h(9, 20), false), 30));
+    assertEquals(null, HuecoCalculator.primerHorario(List.of(r), new Hueco(h(9, 0), h(10, 0), true), null));
+  }
+
+  @Test
+  void primerHorarioUsaElTramoQueContieneAlHueco() {
+    List<Rango> tramos = List.of(rango(9, 0, 12, 0, 60), rango(15, 0, 19, 0, 30));
+    assertEquals(h(15, 30), HuecoCalculator.primerHorario(tramos, new Hueco(h(15, 10), h(17, 0), true), 45));
+    assertEquals(null, HuecoCalculator.primerHorario(tramos, new Hueco(h(13, 0), h(14, 0), false), 30));
+  }
 }

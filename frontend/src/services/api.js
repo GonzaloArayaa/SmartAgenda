@@ -6,7 +6,10 @@ async function request(endpoint, options = {}) {
     headers: { 'Content-Type': 'application/json', ...options.headers },
     ...options,
   };
-  if (config.body && typeof config.body === 'object') {
+  if (config.body instanceof FormData) {
+    // Con archivos el navegador arma solo el Content-Type (con el separador del multipart)
+    delete config.headers['Content-Type'];
+  } else if (config.body && typeof config.body === 'object') {
     config.body = JSON.stringify(config.body);
   }
   const res = await fetch(`${API_URL}/${endpoint}`, config);
@@ -28,11 +31,18 @@ export const auth = {
 export const perfil = {
   get: () => request('perfil'),
   update: (data) => request('perfil', { method: 'PUT', body: data }),
+  subirFoto: (archivo) => {
+    const datos = new FormData();
+    datos.append('foto', archivo);
+    return request('perfil/foto', { method: 'POST', body: datos });
+  },
+  quitarFoto: () => request('perfil/foto', { method: 'DELETE' }),
 };
 
 export const profesionales = {
   getAll: (params = '') => request(`profesionales?${params}`),
   getOne: (id) => request(`profesionales?id=${id}`),
+  getLocalidades: () => request('profesionales/localidades'),
   getByUsuario: (idUsuario) => request(`profesionales?idUsuario=${idUsuario}`),
   create: (data) => request('profesionales', { method: 'POST', body: data }),
   update: (data) => request('profesionales', { method: 'PUT', body: data }),
@@ -78,6 +88,7 @@ export const reportes = {
 export const usuarios = {
   getAll: () => request('usuarios'),
   update: (data) => request('usuarios', { method: 'PUT', body: data }),
+  cambiarRol: (data) => request('usuarios/rol', { method: 'PUT', body: data }),
 };
 
 export const listaEspera = {

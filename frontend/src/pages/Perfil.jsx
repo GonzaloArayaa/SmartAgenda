@@ -1,6 +1,8 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { perfil, reportes } from '../services/api';
 import { useAuth } from '../context/AuthContext';
+import Avatar from '../components/Avatar';
+import { validarFoto } from '../utils/foto';
 
 export default function Perfil() {
   const { user, updateUser } = useAuth();
@@ -11,6 +13,7 @@ export default function Perfil() {
     email: user?.email || '',
     telefono: user?.telefono || '',
     nombreNegocio: user?.nombreNegocio || '',
+    localidad: user?.localidad || '',
     rubro: user?.nombreRubro || user?.rubro || '',
     idRubro: user?.idRubro || '',
     descripcion: user?.descripcion || '',
@@ -20,6 +23,9 @@ export default function Perfil() {
   const [toast, setToast] = useState('');
   const [error, setError] = useState('');
   const [rubros, setRubros] = useState([]);
+  const [subiendoFoto, setSubiendoFoto] = useState(false);
+  const [errorFoto, setErrorFoto] = useState('');
+  const inputFoto = useRef(null);
 
   useEffect(() => {
     let active = true;
@@ -30,7 +36,7 @@ export default function Perfil() {
         setForm({
           nombre: data.nombre || '', apellido: data.apellido || '',
           email: data.email || '', telefono: data.telefono || '',
-          nombreNegocio: data.nombreNegocio || '',
+          nombreNegocio: data.nombreNegocio || '', localidad: data.localidad || '',
           rubro: data.nombreRubro || '', idRubro: data.idRubro || '',
           descripcion: data.descripcion || '',
         });
@@ -53,7 +59,7 @@ export default function Perfil() {
     try {
       const result = await perfil.update({
         nombre: form.nombre, apellido: form.apellido, telefono: form.telefono,
-        ...(user?.rol === 'Profesional' ? { nombreNegocio: form.nombreNegocio, descripcion: form.descripcion, idRubro: form.idRubro } : {}),
+        ...(user?.rol === 'Profesional' ? { nombreNegocio: form.nombreNegocio, localidad: form.localidad, descripcion: form.descripcion, idRubro: form.idRubro } : {}),
       });
       updateUser(result.user);
       setToast(result.message || 'Perfil actualizado correctamente.');
@@ -64,8 +70,39 @@ export default function Perfil() {
     }
   }
 
-  function getInitials() {
-    return ((form.nombre?.[0] || '') + (form.apellido?.[0] || '')).toUpperCase();
+  async function handleFoto(event) {
+    const archivo = event.target.files?.[0];
+    event.target.value = ''; // permite elegir de nuevo el mismo archivo
+    if (!archivo) return;
+    const problema = validarFoto(archivo);
+    if (problema) { setErrorFoto(problema); return; }
+    setSubiendoFoto(true);
+    setErrorFoto('');
+    setToast('');
+    try {
+      const result = await perfil.subirFoto(archivo);
+      updateUser(result.user);
+      setToast(result.message);
+    } catch (err) {
+      setErrorFoto(err.message === 'Failed to fetch' ? 'No pudimos subir la foto. Revisá tu conexión.' : err.message || 'No pudimos subir la foto.');
+    } finally {
+      setSubiendoFoto(false);
+    }
+  }
+
+  async function handleQuitarFoto() {
+    setSubiendoFoto(true);
+    setErrorFoto('');
+    setToast('');
+    try {
+      const result = await perfil.quitarFoto();
+      updateUser(result.user);
+      setToast(result.message);
+    } catch (err) {
+      setErrorFoto(err.message || 'No pudimos quitar la foto.');
+    } finally {
+      setSubiendoFoto(false);
+    }
   }
 
   const camposCompletos = [form.nombre, form.apellido, form.email, form.telefono, form.nombreNegocio, form.descripcion].filter(Boolean).length;
@@ -94,7 +131,16 @@ export default function Perfil() {
 
       <div className="profile-layout">
         <aside className="profile-identity-card">
-          <div className="profile-avatar">{getInitials()}</div>
+          <Avatar className="profile-avatar" idUsuario={user?.idUsuario} fotoVersion={user?.fotoVersion} nombre={form.nombre} apellido={form.apellido} />
+          <div className="profile-photo-actions">
+            <input ref={inputFoto} type="file" accept="image/jpeg,image/png,image/webp" hidden onChange={handleFoto} aria-label="Elegir foto de perfil" />
+            <button type="button" className="profile-photo-btn" onClick={() => inputFoto.current?.click()} disabled={subiendoFoto}>
+              <i className={`fas ${subiendoFoto ? 'fa-spinner fa-spin' : 'fa-camera'}`} /> {subiendoFoto ? 'Subiendo…' : user?.fotoVersion ? 'Cambiar foto' : 'Subir foto'}
+            </button>
+            {user?.fotoVersion && <button type="button" className="profile-photo-remove" onClick={handleQuitarFoto} disabled={subiendoFoto}>Quitar</button>}
+            <small>JPG, PNG o WebP · hasta 2 MB</small>
+          </div>
+          {errorFoto && <p className="profile-photo-error" role="alert"><i className="fas fa-exclamation-circle" /> {errorFoto}</p>}
           <span className="profile-status"><i className="fas fa-circle" /> CUENTA ACTIVA</span>
           <h3>{form.nombre} {form.apellido}</h3>
           <p>{form.email}</p>
@@ -163,6 +209,20 @@ export default function Perfil() {
                     name="nombreNegocio"
                     className="form-input"
                     value={form.nombreNegocio}
+                    onChange={handleChange}
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label className="form-label">Localidad</label>
+                  <input
+                    type="text"
+                    name="localidad"
+                    className="form-input"
+                    placeholder="Ej.: Godoy Cruz"
+                    maxLength={100}
+                    required
+                    value={form.localidad}
                     onChange={handleChange}
                   />
                 </div>

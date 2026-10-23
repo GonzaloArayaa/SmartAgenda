@@ -1,6 +1,7 @@
 import { useState, useEffect, useLayoutEffect, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { usuarios } from '../services/api';
+import Avatar from '../components/Avatar';
+import { usuarios, reportes } from '../services/api';
 
 const GRUPOS = [
   { rol: 'Cliente', plural: 'Clientes', icono: 'fa-user' },
@@ -9,8 +10,79 @@ const GRUPOS = [
 ];
 
 const estaActivo = (u) => String(u.estado).toLowerCase() === 'activo';
-const iniciales = (u) => `${u.nombre?.[0] || ''}${u.apellido?.[0] || ''}`.toUpperCase();
 const cuentas = (n) => `${n} ${n === 1 ? 'cuenta' : 'cuentas'}`;
+
+// Diálogo para cambiar el rol de una cuenta. Hace de confirmación: no se cambia nada hasta apretar "Confirmar cambio".
+function CambiarRolModal({ usuario, onClose, onDone }) {
+  const roles = GRUPOS.map((g) => g.rol).filter((rol) => rol !== usuario.rol);
+  const [rol, setRol] = useState(roles[0]);
+  const [rubros, setRubros] = useState([]);
+  const [datos, setDatos] = useState({ nombreNegocio: '', localidad: '', idRubro: '' });
+  const [guardando, setGuardando] = useState(false);
+  const [error, setError] = useState('');
+  // Quien nunca fue profesional necesita los datos de un negocio para pasar a ese rol
+  const pideNegocio = rol === 'Profesional' && !usuario.tienePerfilProfesional;
+
+  useEffect(() => {
+    if (!pideNegocio || rubros.length > 0) return undefined;
+    let activo = true;
+    reportes.getRubros().then((data) => { if (activo) setRubros(Array.isArray(data) ? data : []); }).catch(() => {});
+    return () => { activo = false; };
+  }, [pideNegocio, rubros.length]);
+
+  useEffect(() => {
+    const alTeclear = (e) => { if (e.key === 'Escape') onClose(); };
+    window.addEventListener('keydown', alTeclear);
+    return () => window.removeEventListener('keydown', alTeclear);
+  }, [onClose]);
+
+  const cambiar = (campo) => (e) => setDatos((prev) => ({ ...prev, [campo]: e.target.value }));
+
+  async function confirmar(event) {
+    event.preventDefault();
+    setGuardando(true);
+    setError('');
+    try {
+      const respuesta = await usuarios.cambiarRol({ idUsuario: usuario.idUsuario, rol, ...(pideNegocio ? datos : {}) });
+      onDone(respuesta.message);
+    } catch (err) {
+      setError(err.message || 'No se pudo cambiar el rol.');
+      setGuardando(false);
+    }
+  }
+
+  return (
+    <div className="modal-overlay module-modal-overlay" onClick={onClose}>
+      <form className="modal module-modal role-modal" role="dialog" aria-modal="true" aria-labelledby="role-modal-titulo" onClick={(e) => e.stopPropagation()} onSubmit={confirmar}>
+        <div className="modal-header">
+          <div><span>ADMINISTRACIÓN DE ACCESOS</span><h3 id="role-modal-titulo">Cambiar rol</h3></div>
+          <button type="button" className="modal-close" onClick={onClose} aria-label="Cerrar"><i className="fas fa-times" /></button>
+        </div>
+        <div className="role-modal-body">
+          <p className="role-modal-person"><strong>{usuario.nombre} {usuario.apellido}</strong><span>{usuario.email}</span></p>
+          <div className="role-modal-change">
+            <span className="role-modal-current">{usuario.rol}</span><i className="fas fa-arrow-right" aria-hidden="true" />
+            <select value={rol} onChange={(e) => { setRol(e.target.value); setError(''); }} aria-label="Nuevo rol" autoFocus>{roles.map((r) => <option key={r} value={r}>{r}</option>)}</select>
+          </div>
+          {pideNegocio && (
+            <div className="role-modal-fields">
+              <p><i className="fas fa-store" /> Esta persona todavía no tiene un negocio. Completá sus datos para pasarla a Profesional.</p>
+              <label>Nombre del negocio<input value={datos.nombreNegocio} onChange={cambiar('nombreNegocio')} maxLength={100} required /></label>
+              <label>Rubro<select value={datos.idRubro} onChange={cambiar('idRubro')} required><option value="">Seleccioná un rubro</option>{rubros.map((r) => <option key={r.idRubro} value={r.idRubro}>{r.nombre}</option>)}</select></label>
+              <label>Localidad<input value={datos.localidad} onChange={cambiar('localidad')} maxLength={100} placeholder="Ej.: Godoy Cruz" required /></label>
+            </div>
+          )}
+          <p className="role-modal-warning"><i className="fas fa-exclamation-triangle" /> Se cerrará la sesión de {usuario.nombre} si está conectado/a, y tendrá que volver a ingresar. No se puede cambiar el rol de quien tenga turnos próximos.</p>
+          {error && <p className="appointment-feedback error" role="alert">{error}</p>}
+        </div>
+        <div className="modal-footer">
+          <button type="button" className="btn btn-outline btn-sm" onClick={onClose}>Cancelar</button>
+          <button type="submit" className="module-primary-btn" disabled={guardando}>{guardando ? 'Guardando…' : 'Confirmar cambio'}</button>
+        </div>
+      </form>
+    </div>
+  );
+}
 
 export default function Usuarios() {
   const { user } = useAuth();
@@ -19,6 +91,9 @@ export default function Usuarios() {
   const [busqueda, setBusqueda] = useState('');
   const [grupoAbierto, setGrupoAbierto] = useState(null);
   const [estadoFiltro, setEstadoFiltro] = useState('todos');
+  const [usuarioRol, setUsuarioRol] = useState(null); // cuenta a la que se le está cambiando el rol
+  const [aviso, setAviso] = useState('');
+  const disparador = useRef(null); // botón que abrió el diálogo, para devolverle el foco al cerrarlo
   const tarjetas = useRef({});
   const posicionesPrevias = useRef(null);
 
@@ -43,11 +118,11 @@ export default function Usuarios() {
 
   // Escape cierra el panel abierto
   useEffect(() => {
-    if (!grupoAbierto) return undefined;
+    if (!grupoAbierto || usuarioRol) return undefined;
     const alTeclear = (e) => { if (e.key === 'Escape') setGrupoAbierto(null); };
     window.addEventListener('keydown', alTeclear);
     return () => window.removeEventListener('keydown', alTeclear);
-  }, [grupoAbierto]);
+  }, [grupoAbierto, usuarioRol]);
 
   // La tarjeta elegida sube al primer lugar: se anima el desplazamiento de cada tarjeta
   useLayoutEffect(() => {
@@ -94,6 +169,22 @@ export default function Usuarios() {
     }
   }
 
+  function abrirCambioRol(u) {
+    disparador.current = document.activeElement;
+    setUsuarioRol(u);
+  }
+
+  function cerrarCambioRol() {
+    setUsuarioRol(null);
+    disparador.current?.focus();
+  }
+
+  function rolCambiado(mensaje) {
+    setUsuarioRol(null);
+    setAviso(mensaje);
+    recargarUsuarios();
+  }
+
   if (loading) return <div className="spinner"></div>;
 
   const texto = busqueda.trim().toLowerCase();
@@ -117,6 +208,8 @@ export default function Usuarios() {
         </div>
         <div className="admin-user-summary"><div><strong>{lista.length}</strong><span>totales</span></div><div><strong>{activos}</strong><span>activos</span></div><div><strong>{profesionales}</strong><span>profesionales</span></div></div>
       </section>
+
+      {aviso && <p className="appointment-feedback success agenda-aviso" role="status"><i className="fas fa-check-circle" /> {aviso}<button type="button" onClick={() => setAviso('')} aria-label="Cerrar aviso"><i className="fas fa-times" /></button></p>}
 
       <section className="admin-user-toolbar users-toolbar-single">
         <div className="admin-user-search"><i className="fas fa-search" /><input value={busqueda} onChange={(e) => setBusqueda(e.target.value)} placeholder="Buscar por nombre o email en todos los grupos" aria-label="Buscar usuarios" />{busqueda && <button onClick={() => setBusqueda('')} aria-label="Limpiar búsqueda"><i className="fas fa-times" /></button>}</div>
@@ -169,9 +262,10 @@ export default function Usuarios() {
                   const esActual = u.idUsuario === user.idUsuario;
                   return (
                     <article key={u.idUsuario} className="users-row">
-                      <div className={`admin-directory-avatar role-${String(u.rol).toLowerCase()}`}>{iniciales(u)}</div>
+                      <Avatar className={`admin-directory-avatar role-${String(u.rol).toLowerCase()}`} idUsuario={u.idUsuario} fotoVersion={u.fotoVersion} nombre={u.nombre} apellido={u.apellido} />
                       <div className="admin-directory-person"><strong>{u.nombre} {u.apellido}</strong><span>{u.email}</span></div>
                       <div className="admin-directory-state"><span className={activo ? 'is-active' : 'is-inactive'}><i className="fas fa-circle" /> {activo ? 'Activo' : 'Inactivo'}</span></div>
+                      <button type="button" disabled={esActual} className="change-role" onClick={() => abrirCambioRol(u)} title={esActual ? 'No podés cambiar tu propio rol' : 'Cambiar el rol de esta cuenta'}><i className="fas fa-user-tag" /> Cambiar rol</button>
                       <button disabled={esActual} className={activo ? 'deactivate' : 'activate'} onClick={() => toggleEstado(u)} title={esActual ? 'Esta es tu cuenta' : activo ? 'Desactivar usuario' : 'Activar usuario'}><i className={`fas ${activo ? 'fa-user-slash' : 'fa-user-check'}`} /> {esActual ? 'Tu cuenta' : activo ? 'Desactivar' : 'Activar'}</button>
                     </article>
                   );
@@ -183,6 +277,8 @@ export default function Usuarios() {
           <p className="users-groups-hint"><i className="fas fa-arrow-left" /> Elegí un grupo para ver sus cuentas</p>
         )}
       </section>
+
+      {usuarioRol && <CambiarRolModal usuario={usuarioRol} onClose={cerrarCambioRol} onDone={rolCambiado} />}
     </div>
   );
 }

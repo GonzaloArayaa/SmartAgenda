@@ -162,7 +162,7 @@ function StepForm({ rol, rubro, rubrosApi, error, loading, onSubmit, onBack }) {
   const [form, setForm] = useState({
     nombre: '', apellido: '', email: '', telefono: '',
     contrasena: '', confirmarContrasena: '',
-    nombreNegocio: '', idRubro: rubro?.idRubro || '', descripcion: '',
+    nombreNegocio: '', idRubro: rubro?.idRubro || '', localidad: '', descripcion: '',
   });
   const [showPass, setShowPass] = useState(false);
 
@@ -283,6 +283,14 @@ function StepForm({ rol, rubro, rubrosApi, error, loading, onSubmit, onBack }) {
             {rubrosApi.length === 0 && <p className="auth-error">No pudimos cargar los rubros. Recargá la página e intentá de nuevo.</p>}
 
             <div className="auth-field">
+              <label>Localidad *</label>
+              <div className="auth-input-wrap">
+                <i className="fas fa-map-marker-alt auth-input-icon"></i>
+                <input name="localidad" placeholder="Ej.: Godoy Cruz" maxLength={100} value={form.localidad} onChange={handleChange} />
+              </div>
+            </div>
+
+            <div className="auth-field">
               <label>Descripción</label>
               <textarea
                 name="descripcion"
@@ -361,6 +369,9 @@ export default function Register() {
     if (rol === 'Profesional' && !form.nombreNegocio.trim()) {
       setError('El nombre del negocio es obligatorio para profesionales.'); return;
     }
+    if (rol === 'Profesional' && !form.localidad.trim()) {
+      setError('Indicá la localidad donde atendés.'); return;
+    }
     if (rol === 'Profesional' && !form.idRubro) {
       setError('Seleccioná un rubro válido para continuar.'); return;
     }
@@ -375,6 +386,7 @@ export default function Register() {
       if (rol === 'Profesional') {
         payload.nombreNegocio = form.nombreNegocio;
         payload.idRubro = form.idRubro;
+        payload.localidad = form.localidad;
         payload.descripcion = form.descripcion;
       }
       await register(payload);

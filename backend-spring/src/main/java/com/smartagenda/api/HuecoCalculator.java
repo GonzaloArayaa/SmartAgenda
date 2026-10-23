@@ -50,6 +50,22 @@ final class HuecoCalculator {
     return huecos;
   }
 
+  /**
+   * Primer horario de la grilla del tramo en el que entra el servicio más corto dentro del hueco,
+   * o null si no entra (o si no hay servicios). Es el primer lugar real que puede reservar un cliente.
+   */
+  static Integer primerHorario(List<Rango> rangos, Hueco hueco, Integer servicioMasCortoMin) {
+    if (servicioMasCortoMin == null || servicioMasCortoMin <= 0) return null;
+    for (Rango rango : rangos) {
+      if (rango.inicio() > hueco.inicio() || hueco.fin() > rango.fin()) continue;
+      int intervalo = Math.max(1, rango.intervalo());
+      int pasos = Math.floorDiv(hueco.inicio() - rango.inicio() + intervalo - 1, intervalo);
+      int primerHorario = rango.inicio() + Math.max(0, pasos) * intervalo;
+      return primerHorario + servicioMasCortoMin <= hueco.fin() ? primerHorario : null;
+    }
+    return null;
+  }
+
   private static void agregar(List<Hueco> huecos, Rango rango, int inicio, int fin, Integer servicioMasCortoMin) {
     if (fin <= inicio) return;
     huecos.add(new Hueco(inicio, fin, esAprovechable(rango, inicio, fin, servicioMasCortoMin)));
