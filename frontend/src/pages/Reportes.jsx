@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { reportes } from '../services/api';
-import { emptyReportStats, normalizeReportStats } from '../utils/reportStats';
+import { emptyReportStats, normalizeReportStats, buildHourSeries, topHorasPico, horaLabel, franjaLabel } from '../utils/reportStats';
+import { exportarPdf, exportarExcel } from '../utils/exportReport';
 import { Bar, Doughnut } from 'react-chartjs-2';
 import {
   Chart as ChartJS,
@@ -38,6 +39,8 @@ export default function Reportes() {
   const [stats, setStats] = useState(emptyReportStats);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [exporting, setExporting] = useState('');
+  const [exportNotice, setExportNotice] = useState(null);
 
   useEffect(() => {
     let active = true;
@@ -71,7 +74,29 @@ export default function Reportes() {
       setError('La fecha desde no puede ser posterior a la fecha hasta.');
       return;
     }
+    setExportNotice(null);
     setAppliedRange({ fechaDesde, fechaHasta });
+  }
+
+  async function handleExportar(formato) {
+    setExporting(formato);
+    setExportNotice(null);
+    try {
+      const meta = {
+        alcance: isAdmin ? 'Todos los profesionales' : `${user.nombre} ${user.apellido}`,
+        generadoPor: `${user.nombre} ${user.apellido}`,
+        generadoEn: new Date().toLocaleString('es-AR', { dateStyle: 'short', timeStyle: 'short', hour12: false }),
+      };
+      const archivo = formato === 'pdf' ? await exportarPdf(stats, meta) : await exportarExcel(stats, meta);
+      setExportNotice({ type: 'ok', text: `Se descargó ${archivo}` });
+      // El registro en la tabla reporte es un extra: si falla, la descarga ya se hizo igual.
+      reportes.registrarExportacion(formato === 'pdf' ? 'PDF' : 'Excel', stats.periodo.fechaDesde, stats.periodo.fechaHasta).catch(() => {});
+    } catch (exportError) {
+      console.error('No se pudo exportar el reporte', exportError);
+      setExportNotice({ type: 'error', text: 'No pudimos generar el archivo. Probá de nuevo.' });
+    } finally {
+      setExporting('');
+    }
   }
 
   const statusValues = ['pendiente', 'confirmado', 'cancelado', 'finalizado', 'vencido'].map(
@@ -80,6 +105,9 @@ export default function Reportes() {
   const hasStatusData = statusValues.some((value) => value > 0);
   const hasServices = stats.serviciosTop.length > 0;
   const hasDailyActivity = stats.turnosPorDia.length > 0;
+  const hourSeries = useMemo(() => buildHourSeries(stats.turnosPorHora), [stats.turnosPorHora]);
+  const topHours = useMemo(() => topHorasPico(stats.turnosPorHora), [stats.turnosPorHora]);
+  const maxHourTotal = hourSeries.reduce((max, item) => Math.max(max, item.total), 0);
 
   const doughnutData = {
     labels: ['Pendiente', 'Confirmado', 'Cancelado', 'Finalizado', 'Vencido'],
@@ -122,6 +150,26 @@ export default function Reportes() {
     datasets: [{ label: 'Turnos', data: stats.turnosPorDia.map((item) => item.total), backgroundColor: '#667B9F', borderRadius: 5 }],
   };
 
+  const hoursData = {
+    labels: hourSeries.map((item) => horaLabel(item.hora)),
+    datasets: [{
+      label: 'Turnos',
+      data: hourSeries.map((item) => item.total),
+      backgroundColor: hourSeries.map((item) => (item.total === maxHourTotal ? '#E96C4D' : '#667B9F')),
+      borderRadius: 5,
+    }],
+  };
+  const hoursOptions = {
+    ...chartOptions,
+    plugins: {
+      ...chartOptions.plugins,
+      tooltip: {
+        ...chartOptions.plugins.tooltip,
+        callbacks: { title: (items) => franjaLabel(hourSeries[items[0].dataIndex].hora) },
+      },
+    },
+  };
+
   const periodLabel = stats.periodo.fechaDesde
     ? `${shortDate(stats.periodo.fechaDesde)} — ${shortDate(stats.periodo.fechaHasta)}`
     : `${shortDate(appliedRange.fechaDesde)} — ${shortDate(appliedRange.fechaHasta)}`;
@@ -159,12 +207,35 @@ export default function Reportes() {
             <article><span>CANCELACIONES</span><strong>{stats.totalCancelaciones}</strong><small>Turnos que no se realizaron</small><i className="fas fa-times" /></article>
           </section>
 
+          <section className="report-export-bar">
+            <div className="report-export-title"><i className="fas fa-file-export" /><div><span>EXPORTAR</span><strong>Descargá este período</strong></div></div>
+            <div className="report-export-actions">
+              <button type="button" className="report-export-btn report-export-pdf" onClick={() => handleExportar('pdf')} disabled={stats.totalTurnos === 0 || Boolean(exporting)}>
+                <i className="fas fa-file-pdf" /> {exporting === 'pdf' ? 'Generando…' : 'Exportar PDF'}
+              </button>
+              <button type="button" className="report-export-btn report-export-excel" onClick={() => handleExportar('excel')} disabled={stats.totalTurnos === 0 || Boolean(exporting)}>
+                <i className="fas fa-file-excel" /> {exporting === 'excel' ? 'Generando…' : 'Exportar Excel'}
+              </button>
+            </div>
+          </section>
+          {exportNotice && <div className={`report-feedback ${exportNotice.type === 'ok' ? 'report-feedback-ok' : 'report-feedback-error'}`} role="status"><i className={`fas ${exportNotice.type === 'ok' ? 'fa-check' : 'fa-exclamation-circle'}`} /><div><span>{exportNotice.text}</span></div></div>}
+
           {stats.totalTurnos === 0 ? (
             <div className="report-feedback report-feedback-empty"><i className="far fa-calendar" /><div><strong>No hay actividad en este período</strong><span>Probá con un rango de fechas diferente.</span></div></div>
           ) : (
             <section className="report-charts-grid">
               <article className="report-chart-card"><header><span>DISTRIBUCIÓN</span><h3>Turnos por estado</h3></header><div className="report-chart-canvas report-doughnut">{hasStatusData ? <Doughnut data={doughnutData} options={doughnutOptions} /> : <div className="report-chart-empty">Sin estados para mostrar</div>}</div></article>
               <article className="report-chart-card"><header><span>DEMANDA</span><h3>Servicios más solicitados</h3></header><div className="report-chart-canvas">{hasServices ? <Bar data={servicesData} options={chartOptions} /> : <div className="report-chart-empty">Sin servicios para mostrar</div>}</div></article>
+              <article className="report-chart-card report-chart-wide">
+                <header><span>HORAS PICO</span><h3>Turnos por franja horaria</h3></header>
+                {topHours.length > 0 && (
+                  <p className="report-peak-summary">
+                    <i className="fas fa-fire" /> Hora pico: <strong>{franjaLabel(topHours[0].hora)}</strong> ({topHours[0].total} {topHours[0].total === 1 ? 'turno' : 'turnos'})
+                    {topHours.length > 1 && <span> · También: {topHours.slice(1).map((item) => `${horaLabel(item.hora)} (${item.total})`).join(', ')}</span>}
+                  </p>
+                )}
+                <div className="report-chart-canvas">{hourSeries.length > 0 ? <Bar data={hoursData} options={hoursOptions} /> : <div className="report-chart-empty">Sin horarios para mostrar</div>}</div>
+              </article>
               <article className="report-chart-card report-chart-wide"><header><span>EVOLUCIÓN</span><h3>Actividad diaria</h3></header><div className="report-chart-canvas">{hasDailyActivity ? <Bar data={dailyData} options={chartOptions} /> : <div className="report-chart-empty">Sin actividad diaria para mostrar</div>}</div></article>
             </section>
           )}

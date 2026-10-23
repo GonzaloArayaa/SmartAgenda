@@ -11,6 +11,8 @@ import java.util.Map;
 import org.springframework.http.HttpStatus;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -91,11 +93,41 @@ public class ReporteController {
     result.put("turnosPorDia", jdbc.queryForList(
         "SELECT fecha,COUNT(*) total FROM turno t WHERE " + periodFilter + " GROUP BY fecha ORDER BY fecha",
         periodParams.toArray()));
+    // Horas pico: cantidad de turnos según la hora de inicio, dentro del período filtrado.
+    result.put("turnosPorHora", jdbc.queryForList(
+        "SELECT HOUR(t.horaInicio) hora,COUNT(*) total FROM turno t WHERE " + periodFilter
+            + " GROUP BY HOUR(t.horaInicio) ORDER BY hora",
+        periodParams.toArray()));
     result.put("serviciosTop", jdbc.queryForList(
         "SELECT s.idServicio,s.nombre,COUNT(*) total FROM turno t JOIN servicio s ON t.idServicio=s.idServicio WHERE "
             + periodFilter + " GROUP BY s.idServicio,s.nombre ORDER BY total DESC,s.nombre LIMIT 5",
         periodParams.toArray()));
     return result;
+  }
+
+  /** Deja constancia en la tabla reporte de cada exportación (PDF o Excel) que se genera. */
+  @PostMapping("/exportaciones")
+  public Map<String, Object> registrarExportacion(@RequestBody Map<String, Object> body, HttpSession session) {
+    Map<String, Object> user = SessionSupport.user(session);
+    String role = String.valueOf(user.get("rol"));
+    if ("Cliente".equals(role)) {
+      throw new ApiException(HttpStatus.FORBIDDEN, "No tiene permisos para exportar reportes");
+    }
+    String formato = String.valueOf(body.getOrDefault("formato", "")).toUpperCase();
+    if (!formato.equals("PDF") && !formato.equals("EXCEL")) {
+      throw new ApiException(HttpStatus.BAD_REQUEST, "El formato debe ser PDF o Excel");
+    }
+    LocalDate from = parseDate(String.valueOf(body.getOrDefault("fechaDesde", "")), null, "fechaDesde");
+    LocalDate to = parseDate(String.valueOf(body.getOrDefault("fechaHasta", "")), null, "fechaHasta");
+    if (from == null || to == null) {
+      throw new ApiException(HttpStatus.BAD_REQUEST, "Indicá el período del reporte");
+    }
+    String alcance = "Profesional".equals(role) ? "profesional " + SessionSupport.intValue(user, "idProfesional") : "global";
+    String datos = "{\"formato\":\"" + formato + "\",\"fechaDesde\":\"" + from + "\",\"fechaHasta\":\"" + to
+        + "\",\"alcance\":\"" + alcance + "\"}";
+    jdbc.update("INSERT INTO reporte (tipo, datos, idUsuario) VALUES (?,?,?)",
+        "exportacion-" + formato.toLowerCase(), datos, SessionSupport.intValue(user, "idUsuario"));
+    return Map.of("ok", true);
   }
 
   private LocalDate parseDate(String value, LocalDate fallback, String field) {
