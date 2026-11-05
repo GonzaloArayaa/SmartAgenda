@@ -61,6 +61,7 @@ export const turnos = {
   getClients: (search = '', includeInactive = false) =>
     request(`turnos/clientes?buscar=${encodeURIComponent(search)}&incluirInactivos=${includeInactive}`),
   getHistoryServices: () => request('turnos/servicios'),
+  createClient: (data) => request('turnos/clientes', { method: 'POST', body: data }),
   create: (data) => request('turnos', { method: 'POST', body: data }),
   update: (data) => request('turnos', { method: 'PUT', body: data }),
 };

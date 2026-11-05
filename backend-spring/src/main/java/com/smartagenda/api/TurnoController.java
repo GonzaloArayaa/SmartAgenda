@@ -34,7 +34,7 @@ public class TurnoController {
     expiration.expirePastAppointments();
     StringBuilder sql = new StringBuilder(
         "SELECT t.*,s.nombre servicio_nombre,s.duracionMin,p.nombreNegocio,"
-            + "uc.nombre cliente_nombre,uc.apellido cliente_apellido,uc.email cliente_email,"
+            + "uc.nombre cliente_nombre,uc.apellido cliente_apellido,uc.email cliente_email,uc.telefono cliente_telefono,"
             + "up.nombre profesional_nombre,up.apellido profesional_apellido "
             + "FROM turno t JOIN servicio s ON t.idServicio=s.idServicio "
             + "JOIN profesional p ON t.idProfesional=p.idProfesional "
@@ -74,12 +74,51 @@ public class TurnoController {
     SessionSupport.role(session, "Profesional", "Administrador");
     String pattern = "%" + buscar.trim() + "%";
     return jdbc.queryForList(
-        "SELECT u.idUsuario,u.nombre,u.apellido,u.email FROM usuario u "
+        "SELECT u.idUsuario,u.nombre,u.apellido,u.email,u.telefono,u.cuentaActiva FROM usuario u "
             + "JOIN rol r ON r.idRol=u.idRol WHERE r.nombreRol='Cliente' "
             + (incluirInactivos ? "" : "AND u.estado='activo' ")
-            + "AND (u.nombre LIKE ? OR u.apellido LIKE ? OR u.email LIKE ?) "
+            + "AND (u.nombre LIKE ? OR u.apellido LIKE ? OR u.email LIKE ? OR u.telefono LIKE ?) "
             + "ORDER BY u.apellido,u.nombre",
-        pattern, pattern, pattern);
+        pattern, pattern, pattern, pattern);
+  }
+
+  /**
+   * Alta rápida de un cliente que todavía no tiene cuenta (demanda espontánea). Queda sin contraseña
+   * (no puede iniciar sesión) hasta que se registre con el mismo email. Hace falta al menos teléfono o email.
+   */
+  @PostMapping("/clientes")
+  @Transactional
+  public Map<String, Object> createClient(@RequestBody Map<String, Object> body, HttpSession session) {
+    SessionSupport.role(session, "Profesional", "Administrador");
+    String nombre = AuthController.text(body, "nombre");
+    String apellido = AuthController.text(body, "apellido");
+    String email = AuthController.text(body, "email");
+    String telefono = AuthController.text(body, "telefono");
+    if (nombre.isBlank() || apellido.isBlank()) {
+      throw new ApiException(HttpStatus.BAD_REQUEST, "Nombre y apellido son obligatorios");
+    }
+    if (email.isBlank() && telefono.isBlank()) {
+      throw new ApiException(HttpStatus.BAD_REQUEST, "Indicá al menos un teléfono o un email");
+    }
+    if (nombre.length() > 50 || apellido.length() > 50 || email.length() > 100 || telefono.length() > 20) {
+      throw new ApiException(HttpStatus.BAD_REQUEST, "Algún dato supera el largo permitido");
+    }
+    if (!email.isBlank() && !email.matches("^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$")) {
+      throw new ApiException(HttpStatus.BAD_REQUEST, "El email no es válido");
+    }
+    if (!telefono.isBlank() && telefono.replaceAll("\\D", "").length() < 6) {
+      throw new ApiException(HttpStatus.BAD_REQUEST, "El teléfono no es válido");
+    }
+    if (!email.isBlank()
+        && jdbc.queryForObject("SELECT COUNT(*) FROM usuario WHERE email=?", Integer.class, email) > 0) {
+      throw new ApiException(HttpStatus.CONFLICT, "Ya existe una persona con ese email: buscala en la lista de clientes");
+    }
+    Integer rolId = jdbc.queryForObject("SELECT idRol FROM rol WHERE nombreRol='Cliente'", Integer.class);
+    jdbc.update("INSERT INTO usuario(nombre,apellido,email,contrasena,telefono,cuentaActiva,idRol) "
+            + "VALUES(?,?,?,NULL,?,0,?)",
+        nombre, apellido, email.isBlank() ? null : email, telefono.isBlank() ? null : telefono, rolId);
+    int id = jdbc.queryForObject("SELECT LAST_INSERT_ID()", Integer.class);
+    return Map.of("message", "Cliente cargado correctamente", "idUsuario", id);
   }
 
   @GetMapping("/servicios")

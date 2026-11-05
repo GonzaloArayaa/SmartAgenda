@@ -59,7 +59,7 @@ function CambiarRolModal({ usuario, onClose, onDone }) {
           <button type="button" className="modal-close" onClick={onClose} aria-label="Cerrar"><i className="fas fa-times" /></button>
         </div>
         <div className="role-modal-body">
-          <p className="role-modal-person"><strong>{usuario.nombre} {usuario.apellido}</strong><span>{usuario.email}</span></p>
+          <p className="role-modal-person"><strong>{usuario.nombre} {usuario.apellido}</strong><span>{usuario.email || usuario.telefono}</span></p>
           <div className="role-modal-change">
             <span className="role-modal-current">{usuario.rol}</span><i className="fas fa-arrow-right" aria-hidden="true" />
             <select value={rol} onChange={(e) => { setRol(e.target.value); setError(''); }} aria-label="Nuevo rol" autoFocus>{roles.map((r) => <option key={r} value={r}>{r}</option>)}</select>
@@ -188,7 +188,7 @@ export default function Usuarios() {
   if (loading) return <div className="spinner"></div>;
 
   const texto = busqueda.trim().toLowerCase();
-  const coincide = (u) => !texto || `${u.nombre} ${u.apellido} ${u.email}`.toLowerCase().includes(texto);
+  const coincide = (u) => !texto || `${u.nombre} ${u.apellido} ${u.email || ""} ${u.telefono || ""}`.toLowerCase().includes(texto);
   const visiblesDe = (rol) => lista.filter((u) => u.rol === rol && coincide(u));
 
   const activos = lista.filter(estaActivo).length;
@@ -263,7 +263,7 @@ export default function Usuarios() {
                   return (
                     <article key={u.idUsuario} className="users-row">
                       <Avatar className={`admin-directory-avatar role-${String(u.rol).toLowerCase()}`} idUsuario={u.idUsuario} fotoVersion={u.fotoVersion} nombre={u.nombre} apellido={u.apellido} />
-                      <div className="admin-directory-person"><strong>{u.nombre} {u.apellido}</strong><span>{u.email}</span></div>
+                      <div className="admin-directory-person"><strong>{u.nombre} {u.apellido}</strong><span>{u.email || u.telefono}{u.cuentaActiva === false ? " · sin cuenta" : ""}</span></div>
                       <div className="admin-directory-state"><span className={activo ? 'is-active' : 'is-inactive'}><i className="fas fa-circle" /> {activo ? 'Activo' : 'Inactivo'}</span></div>
                       <button type="button" disabled={esActual} className="change-role" onClick={() => abrirCambioRol(u)} title={esActual ? 'No podés cambiar tu propio rol' : 'Cambiar el rol de esta cuenta'}><i className="fas fa-user-tag" /> Cambiar rol</button>
                       <button disabled={esActual} className={activo ? 'deactivate' : 'activate'} onClick={() => toggleEstado(u)} title={esActual ? 'Esta es tu cuenta' : activo ? 'Desactivar usuario' : 'Activar usuario'}><i className={`fas ${activo ? 'fa-user-slash' : 'fa-user-check'}`} /> {esActual ? 'Tu cuenta' : activo ? 'Desactivar' : 'Activar'}</button>
