@@ -24,6 +24,8 @@ public class AuthController {
     try { dbUser = jdbc.queryForMap("SELECT u.idUsuario,u.nombre,u.apellido,u.email,u.contrasena,u.telefono,u.estado,r.nombreRol rol,p.idProfesional,p.nombreNegocio,p.localidad,(SELECT f.version FROM foto_perfil f WHERE f.idUsuario=u.idUsuario) fotoVersion FROM usuario u JOIN rol r ON u.idRol=r.idRol LEFT JOIN profesional p ON p.idUsuario=u.idUsuario WHERE u.email=?",email); }
     catch (org.springframework.dao.EmptyResultDataAccessException e) { throw new ApiException(HttpStatus.UNAUTHORIZED,"Credenciales incorrectas"); }
     if (!"activo".equals(dbUser.get("estado"))) throw new ApiException(HttpStatus.FORBIDDEN,"Cuenta deshabilitada. Contacte al administrador.");
+    // Cliente cargado por un profesional que todavía no creó su cuenta: no tiene contraseña
+    if (dbUser.get("contrasena") == null) throw new ApiException(HttpStatus.FORBIDDEN,"Esta cuenta todavía no está activada. Registrate con este email para activarla.");
     String hash = String.valueOf(dbUser.get("contrasena")).replace("$2y$", "$2a$");
     if (!passwords.matches(password,hash)) throw new ApiException(HttpStatus.UNAUTHORIZED,"Credenciales incorrectas");
     dbUser.remove("contrasena"); session.setAttribute("user",dbUser);
@@ -48,7 +50,15 @@ public class AuthController {
       if(rubro <= 0 || jdbc.queryForObject("SELECT COUNT(*) FROM rubro WHERE idRubro=? AND estado='activo'",Integer.class,rubro)==0)
         throw new ApiException(HttpStatus.BAD_REQUEST,"Seleccioná un rubro activo");
     }
-    if(jdbc.queryForObject("SELECT COUNT(*) FROM usuario WHERE email=?",Integer.class,email)>0) throw new ApiException(HttpStatus.CONFLICT,"El email ya está registrado");
+    var existente = jdbc.queryForList("SELECT idUsuario,cuentaActiva FROM usuario WHERE email=?",email);
+    if(!existente.isEmpty()) {
+      // Si un profesional ya cargó a esta persona como cliente sin cuenta, el registro activa esa misma cuenta (conserva sus turnos)
+      boolean sinCuenta = Boolean.FALSE.equals(existente.get(0).get("cuentaActiva"));
+      if(!sinCuenta || !"Cliente".equals(rol)) throw new ApiException(HttpStatus.CONFLICT,"El email ya está registrado");
+      int idExistente = ((Number) existente.get(0).get("idUsuario")).intValue();
+      jdbc.update("UPDATE usuario SET nombre=?,apellido=?,contrasena=?,telefono=COALESCE(NULLIF(?,''),telefono),cuentaActiva=1 WHERE idUsuario=?",nombre,apellido,passwords.encode(pass),telefono,idExistente);
+      return Map.of("message","Cuenta activada: ya podés ver tus turnos","idUsuario",idExistente);
+    }
     Integer rolId; try { rolId=jdbc.queryForObject("SELECT idRol FROM rol WHERE nombreRol=?",Integer.class,rol); } catch(org.springframework.dao.EmptyResultDataAccessException e) { throw new ApiException(HttpStatus.BAD_REQUEST,"Rol no válido"); }
     jdbc.update("INSERT INTO usuario(nombre,apellido,email,contrasena,telefono,idRol) VALUES(?,?,?,?,?,?)",nombre,apellido,email,passwords.encode(pass),telefono,rolId);
     Integer id=jdbc.queryForObject("SELECT idUsuario FROM usuario WHERE email=?",Integer.class,email);

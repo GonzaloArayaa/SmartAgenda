@@ -101,7 +101,7 @@ export default function HistorialTurnos() {
             <div className="appointment-history-date"><strong>{appointment.fecha}</strong>
               <span>{String(appointment.horaInicio).slice(0, 5)} hs</span></div>
             <div><strong>{appointment.cliente_nombre} {appointment.cliente_apellido}</strong>
-              <span>{appointment.servicio_nombre} · {appointment.cliente_email}</span></div>
+              <span>{appointment.servicio_nombre} · {appointment.cliente_email || appointment.cliente_telefono}</span></div>
             <span className={`badge badge-${state}`}>{appointment.estado}</span>
           </article>;
         }) : <div className="appointment-history-empty">No encontramos turnos con estos filtros.</div>}

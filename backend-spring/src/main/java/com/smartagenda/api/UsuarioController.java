@@ -28,7 +28,7 @@ import org.springframework.web.bind.annotation.*;
 
   @GetMapping public List<Map<String,Object>> list(HttpSession s){
     SessionSupport.role(s,"Administrador");
-    return jdbc.queryForList("SELECT u.idUsuario,u.nombre,u.apellido,u.email,u.telefono,u.estado,u.fechaRegistro,r.nombreRol rol,"
+    return jdbc.queryForList("SELECT u.idUsuario,u.nombre,u.apellido,u.email,u.telefono,u.estado,u.cuentaActiva,u.fechaRegistro,r.nombreRol rol,"
         + "EXISTS(SELECT 1 FROM profesional p WHERE p.idUsuario=u.idUsuario) tienePerfilProfesional,"
         + "(SELECT f.version FROM foto_perfil f WHERE f.idUsuario=u.idUsuario) fotoVersion "
         + "FROM usuario u JOIN rol r ON u.idRol=r.idRol ORDER BY u.fechaRegistro DESC");
@@ -79,6 +79,9 @@ import org.springframework.web.bind.annotation.*;
     catch(EmptyResultDataAccessException e){throw new ApiException(HttpStatus.NOT_FOUND,"Usuario no encontrado");}
     String actual=String.valueOf(usuario.get("rol"));
     if(actual.equals(nuevoRol))throw new ApiException(HttpStatus.CONFLICT,"El usuario ya tiene el rol "+nuevoRol);
+    // Un cliente cargado por un profesional sin cuenta no tiene contraseña: no puede pasar a otro rol hasta activarla
+    if(Boolean.FALSE.equals(jdbc.queryForObject("SELECT cuentaActiva FROM usuario WHERE idUsuario=?",Boolean.class,id)))
+      throw new ApiException(HttpStatus.CONFLICT,"Este cliente todavía no activó su cuenta: no se le puede cambiar el rol");
 
     // Los turnos próximos del rol que se deja quedarían sin nadie que los gestione
     int proximos=0;

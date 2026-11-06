@@ -275,7 +275,7 @@ function DashboardAdmin({ user }) {
       </section>
 
       <section className="admin-overview-grid">
-        <article className="admin-recent-users"><header><div><span>ALTAS RECIENTES</span><h3>Últimos usuarios</h3></div><Link to="/usuarios">Ver gestión completa</Link></header><div>{usuariosRecientes.map((u)=><div key={u.idUsuario} className="admin-user-row"><div className="admin-user-avatar">{`${u.nombre?.[0]||''}${u.apellido?.[0]||''}`.toUpperCase()}</div><div><strong>{u.nombre} {u.apellido}</strong><span>{u.email}</span></div><b>{u.rol}</b><small className={String(u.estado).toLowerCase()}><i className="fas fa-circle" /> {u.estado}</small></div>)}</div></article>
+        <article className="admin-recent-users"><header><div><span>ALTAS RECIENTES</span><h3>Últimos usuarios</h3></div><Link to="/usuarios">Ver gestión completa</Link></header><div>{usuariosRecientes.map((u)=><div key={u.idUsuario} className="admin-user-row"><div className="admin-user-avatar">{`${u.nombre?.[0]||''}${u.apellido?.[0]||''}`.toUpperCase()}</div><div><strong>{u.nombre} {u.apellido}</strong><span>{u.email || u.telefono}</span></div><b>{u.rol}</b><small className={String(u.estado).toLowerCase()}><i className="fas fa-circle" /> {u.estado}</small></div>)}</div></article>
         <aside className="admin-system-card"><span>CONTROL DE ACCESO</span><strong>{totalActivos}/{totalUsuarios}</strong><p>cuentas activas en el sistema</p><div><i className="fas fa-lock" /> Las sesiones y permisos se validan desde el servidor.</div><Link to="/usuarios">Revisar cuentas</Link></aside>
       </section>
     </div>
