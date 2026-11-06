@@ -6,7 +6,7 @@ Sistema de agenda inteligente para profesionales, con frontend React y API REST 
 
 - Java 21
 - MySQL Server 8+
-- Node.js 18+ y npm
+- Node.js 20.19+ (recomendado 22 o 24) y npm
 
 ## Base de datos
 
@@ -42,10 +42,12 @@ Los cambios de base son scripts numerados en `backend-spring/src/main/resources/
 |---|---|
 | `V1__esquema.sql` | Tablas |
 | `V2__datos_de_ejemplo.sql` | Datos de ejemplo |
+| `V3__localidad_y_foto_de_perfil.sql` | Localidad del profesional y foto de perfil |
+| `V4__cliente_sin_cuenta.sql` | Clientes sin cuenta (turnos por demanda espontánea) |
 
-Para agregar un cambio (una columna, una tabla, datos), crear un archivo nuevo con el número siguiente, por ejemplo `V3__agregar_columna_x.sql`. Al reiniciar el backend se aplica solo, en todas las computadoras que tengan el código.
+Para agregar un cambio (una columna, una tabla, datos), crear un archivo nuevo con el número siguiente, por ejemplo `V5__agregar_columna_x.sql`. Al reiniciar el backend se aplica solo, en todas las computadoras que tengan el código.
 
-> **No editar** `V1` ni `V2` una vez publicados: Flyway detecta el cambio y el backend no arranca. Cualquier ajuste va en una versión nueva.
+> **No editar** ninguna migración ya publicada (`V1` a `V4`): Flyway detecta el cambio y el backend no arranca. Cualquier ajuste va en una versión nueva.
 
 ### Variables de conexión
 
@@ -95,12 +97,12 @@ Abrir `http://localhost:5173`.
 | `Access denied for user 'smartagenda'@'localhost' to database 'smartagenda_pro'` | El usuario no tiene permisos: ejecutar el `GRANT` de la sección *Primera vez*. |
 | `Access denied for user 'smartagenda'` o `Communications link failure` | El usuario o la contraseña no coinciden, o MySQL no está prendido. |
 | `Port 8080 was already in use` | Hay otro backend abierto: cerrar esa terminal o el proceso Java. |
-| `Migration checksum mismatch` | Se editó `V1` o `V2`. Volver al archivo original y poner el cambio en una versión nueva. |
+| `Migration checksum mismatch` | Se editó una migración ya publicada (`V1` a `V4`). Volver al archivo original y poner el cambio en una versión nueva. |
 
 ## Estructura
 
 ```text
-SmartAgenda_Pro/
+SmartAgenda/
 ├── backend-spring/    ← API REST Spring Boot
 │   └── src/main/resources/db/migration/   ← Esquema y datos de MySQL (Flyway)
 └── frontend/          ← React + Vite
@@ -111,6 +113,8 @@ SmartAgenda_Pro/
 - Login y registro con roles: Cliente, Profesional y Administrador.
 - Gestión de servicios y disponibilidad, con horario cortado (varios tramos por día).
 - Reserva, confirmación, cancelación y reprogramación de turnos.
-- Búsqueda de profesionales y recomendaciones de horarios.
+- Búsqueda de profesionales (con localidad y foto de perfil) y recomendaciones de horarios.
+- Lista de espera: el cliente se anota y se le ofrece un horario cuando se libera.
+- Clientes sin cuenta: el profesional puede cargar turnos por demanda espontánea.
 - Huecos de la agenda: espacios libres entre turnos.
 - Reportes y administración de usuarios.
